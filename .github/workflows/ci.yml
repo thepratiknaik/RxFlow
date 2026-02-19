@@ -1,0 +1,15 @@
+name: RxFlow CI
+
+on:
+  pull_request:
+    branches: [ main, UAT, dev ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Unit Tests
+        run: |
+          echo "Running Python and React Unit Tests..."
+          # Add your actual test commands here (e.g., pytest, npm test)
