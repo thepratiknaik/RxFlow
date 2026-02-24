@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+
+# Environment variables
+.env
+
+# Local data/volumes
+/data
+/db_data
+/var/lib/postgresql/data
+
+# Logs
+*.log
