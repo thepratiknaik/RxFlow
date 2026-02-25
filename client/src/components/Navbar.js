@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import "./Navbar.css";
 
 const Navbar = () => {
@@ -135,23 +136,23 @@ const Navbar = () => {
 
           {/* Action buttons inside menu for mobile */}
           <div className="navbar-actions-mobile">
-            <a href="#" className="btn-login">
+            <Link to="/login" className="btn-login">
               Login
-            </a>
-            <a href="#" className="btn-signup">
+            </Link>
+            <Link to="/signup" className="btn-signup">
               Sign Up
-            </a>
+            </Link>
           </div>
         </nav>
 
         {/* PART 3: Action Buttons Section (Desktop only) */}
         <div className="navbar-actions">
-          <a href="#" className="btn-login">
+          <Link to="/login" className="btn-login">
             Login
-          </a>
-          <a href="#" className="btn-signup">
+          </Link>
+          <Link to="/signup" className="btn-signup">
             Sign Up
-          </a>
+          </Link>
         </div>
       </div>
 
