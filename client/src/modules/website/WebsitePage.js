@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
+import Navbar from "../../components/Navbar";
+import "./WebsitePage.css";
 
 const handleSubmit = (event) => {
   event.preventDefault();
@@ -16,25 +18,33 @@ const handleSubmit = (event) => {
 };
 
 const WebsitePage = () => {
+  useEffect(() => {
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: "0px 0px -50px 0px",
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("animate-in");
+        }
+      });
+    }, observerOptions);
+
+    // Observe all elements with data-animate attribute
+    const animateElements = document.querySelectorAll("[data-animate]");
+    animateElements.forEach((el) => observer.observe(el));
+
+    return () => {
+      animateElements.forEach((el) => observer.unobserve(el));
+    };
+  }, []);
+
   return (
     <>
-      <header>
-        <div className="header-container">
-          <a href="/" className="logo">
-            RxFlow
-          </a>
-          <nav>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#features">Features</a>
-            <a href="#services">Services</a>
-            <a href="#testimonials">Testimonials</a>
-            <a href="#contact">Contact</a>
-            <a href="#contact" className="cta-demo">
-              Request Demo
-            </a>
-          </nav>
-        </div>
-      </header>
+      <Navbar />
 
       <section className="hero">
         <div className="hero-content">
@@ -55,10 +65,10 @@ const WebsitePage = () => {
       </section>
 
       <section className="how-it-works" id="how-it-works">
-        <div className="how-it-works-container">
+        <div className="how-it-works-container" data-animate>
           <h2 className="section-title">How RxFlow Works</h2>
           <div className="steps-grid">
-            <div className="step-card">
+            <div className="step-card" data-animate>
               <div className="step-number">1</div>
               <h3>Prescription Intake</h3>
               <p>
@@ -67,7 +77,7 @@ const WebsitePage = () => {
                 integrated drug information.
               </p>
             </div>
-            <div className="step-card">
+            <div className="step-card" data-animate>
               <div className="step-number">2</div>
               <h3>Inventory Management</h3>
               <p>
@@ -76,7 +86,7 @@ const WebsitePage = () => {
                 efficiently.
               </p>
             </div>
-            <div className="step-card">
+            <div className="step-card" data-animate>
               <div className="step-number">3</div>
               <h3>Patient Pickup &amp; Audit</h3>
               <p>
@@ -89,10 +99,10 @@ const WebsitePage = () => {
       </section>
 
       <section className="features" id="features">
-        <div className="features-container">
+        <div className="features-container" data-animate>
           <h2 className="section-title">Powerful Features</h2>
           <div className="features-grid">
-            <div className="feature-card">
+            <div className="feature-card" data-animate>
               <div className="feature-icon">📋</div>
               <h3>Complete Workflow Management</h3>
               <p>
@@ -100,7 +110,7 @@ const WebsitePage = () => {
                 pharmacy workflow in one intuitive platform.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card" data-animate>
               <div className="feature-icon">💾</div>
               <h3>Centralized Data Hub</h3>
               <p>
@@ -108,7 +118,7 @@ const WebsitePage = () => {
                 secure location. Easy access, better decisions.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card" data-animate>
               <div className="feature-icon">📊</div>
               <h3>Smart Inventory Control</h3>
               <p>
@@ -116,7 +126,7 @@ const WebsitePage = () => {
                 alerts prevent stockouts and waste.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card" data-animate>
               <div className="feature-icon">🔐</div>
               <h3>Role-Based Access Control</h3>
               <p>
@@ -124,7 +134,7 @@ const WebsitePage = () => {
                 personnel access sensitive pharmacy data.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card" data-animate>
               <div className="feature-icon">📱</div>
               <h3>E-Prescription Integration</h3>
               <p>
@@ -132,7 +142,7 @@ const WebsitePage = () => {
                 providers and external systems.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card" data-animate>
               <div className="feature-icon">✅</div>
               <h3>Complete Audit Trails</h3>
               <p>
@@ -145,10 +155,10 @@ const WebsitePage = () => {
       </section>
 
       <section className="comparison">
-        <div className="comparison-container">
+        <div className="comparison-container" data-animate>
           <h2 className="section-title">Our Value Proposition</h2>
           <div className="services-grid" style={{ marginTop: "2rem" }}>
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>🎯 Mission-Critical Efficiency</h3>
               <p>
                 Automate prescription workflows end-to-end. Reduce manual entry,
@@ -156,7 +166,7 @@ const WebsitePage = () => {
                 before.
               </p>
             </div>
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>📦 Complete Inventory Control</h3>
               <p>
                 Track lot numbers and expiry dates with precision. Receive
@@ -164,21 +174,21 @@ const WebsitePage = () => {
                 stockouts.
               </p>
             </div>
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>🔗 Modern Integration Ready</h3>
               <p>
                 Seamlessly connect with e-prescription systems and external data
                 sources. Built for interoperability from the ground up.
               </p>
             </div>
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>📊 Single Source of Truth</h3>
               <p>
                 Centralize patient, prescriber, and drug data. End fragmented
                 systems and gain complete visibility across operations.
               </p>
             </div>
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>✅ Compliance &amp; Accountability</h3>
               <p>
                 Automatic audit logs capture every action. Meet regulatory
@@ -186,7 +196,7 @@ const WebsitePage = () => {
                 auditors.
               </p>
             </div>
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>🛡️ Enterprise-Grade Security</h3>
               <p>
                 Role-based access controls and secure cloud infrastructure
@@ -199,10 +209,10 @@ const WebsitePage = () => {
       </section>
 
       <section className="services" id="services">
-        <div className="services-container">
+        <div className="services-container" data-animate>
           <h2 className="section-title">Our Service Offerings</h2>
           <div className="services-grid">
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>Core Platform Access</h3>
               <p>
                 Full access to RxFlow's prescription management and inventory
@@ -215,7 +225,7 @@ const WebsitePage = () => {
                 <li>Cloud-based data storage</li>
               </ul>
             </div>
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>Integration Services</h3>
               <p>
                 Seamless connectivity with your existing pharmacy systems and
@@ -228,7 +238,7 @@ const WebsitePage = () => {
                 <li>Custom workflow adaptations</li>
               </ul>
             </div>
-            <div className="service-box">
+            <div className="service-box" data-animate>
               <h3>Training &amp; Support</h3>
               <p>
                 Comprehensive onboarding, staff training, and ongoing support to
@@ -246,22 +256,22 @@ const WebsitePage = () => {
       </section>
 
       <section className="security">
-        <div className="security-content">
-          <div className="security-item">
+        <div className="security-content" data-animate>
+          <div className="security-item" data-animate>
             <h4>🔐 Role-Based Access Control</h4>
             <p>
               Granular permissions ensure only authorized staff access sensitive
               prescription and patient data.
             </p>
           </div>
-          <div className="security-item">
+          <div className="security-item" data-animate>
             <h4>📋 Complete Audit Logs</h4>
             <p>
               Every transaction logged automatically. Full accountability and
               regulatory compliance for your pharmacy.
             </p>
           </div>
-          <div className="security-item">
+          <div className="security-item" data-animate>
             <h4>☁️ Secure Cloud Infrastructure</h4>
             <p>
               Enterprise-grade encryption and secure data storage. Your pharmacy
@@ -272,10 +282,10 @@ const WebsitePage = () => {
       </section>
 
       <section className="testimonials" id="testimonials">
-        <div className="testimonials-container">
+        <div className="testimonials-container" data-animate>
           <h2 className="section-title">What Our Clients Say</h2>
           <div className="testimonials-grid">
-            <div className="testimonial-card">
+            <div className="testimonial-card" data-animate>
               <p className="testimonial-text">
                 RxFlow completely transformed how we manage prescriptions. Our
                 inventory is now accurate, and we've cut down processing time by
@@ -325,7 +335,7 @@ const WebsitePage = () => {
       </section>
 
       <section className="contact" id="contact">
-        <div className="contact-container">
+        <div className="contact-container" data-animate>
           <h2 className="section-title">Get Your Demo</h2>
           <p className="section-subtitle">
             Ready to transform your pharmacy? Request a personalized demo and
@@ -370,13 +380,13 @@ const WebsitePage = () => {
       </section>
 
       <section className="team">
-        <div className="team-container">
+        <div className="team-container" data-animate>
           <h2 className="section-title">Meet Our Team</h2>
           <p className="section-subtitle">
             Expert professionals dedicated to transforming pharmacy management
           </p>
           <div className="team-grid">
-            <div className="team-member">
+            <div className="team-member" data-animate>
               <div className="member-avatar">👨‍💼</div>
               <div className="member-info">
                 <h3>Alex Martinez</h3>
@@ -388,7 +398,7 @@ const WebsitePage = () => {
                 </p>
               </div>
             </div>
-            <div className="team-member">
+            <div className="team-member" data-animate>
               <div className="member-avatar">👩‍💻</div>
               <div className="member-info">
                 <h3>Emma Chen</h3>
@@ -399,7 +409,7 @@ const WebsitePage = () => {
                 </p>
               </div>
             </div>
-            <div className="team-member">
+            <div className="team-member" data-animate>
               <div className="member-avatar">👩‍⚕️</div>
               <div className="member-info">
                 <h3>Dr. Lisa Anderson</h3>
@@ -415,15 +425,15 @@ const WebsitePage = () => {
       </section>
 
       <footer>
-        <div className="footer-container">
-          <div className="footer-section">
+        <div className="footer-container" data-animate>
+          <div className="footer-section" data-animate>
             <h4>RxFlow</h4>
             <p>
               Modern pharmacy management for independent and community
               pharmacies.
             </p>
           </div>
-          <div className="footer-section">
+          <div className="footer-section" data-animate>
             <h4>Product</h4>
             <ul>
               <li>
@@ -440,7 +450,7 @@ const WebsitePage = () => {
               </li>
             </ul>
           </div>
-          <div className="footer-section">
+          <div className="footer-section" data-animate>
             <h4>Company</h4>
             <ul>
               <li>
@@ -457,7 +467,7 @@ const WebsitePage = () => {
               </li>
             </ul>
           </div>
-          <div className="footer-section">
+          <div className="footer-section" data-animate>
             <h4>Legal</h4>
             <ul>
               <li>
@@ -475,7 +485,7 @@ const WebsitePage = () => {
             </ul>
           </div>
         </div>
-        <div className="footer-bottom">
+        <div className="footer-bottom" data-animate>
           <p>
             © 2026 RxFlow. All rights reserved. | Transforming Pharmacy
             Operations Worldwide
