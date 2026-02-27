@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.js";
+import { ROUTES } from "../../config/routes.js";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -8,7 +9,7 @@ const DashboardPage = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate(ROUTES.LOGIN);
   };
 
   return (

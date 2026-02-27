@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
+import { ROUTES } from "../config/routes.js";
 import "./Navbar.css";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
 
   const handleLogout = async () => {
     await logout();
     setMobileMenuOpen(false);
-    navigate("/");
+    navigate(ROUTES.HOME);
   };
 
   // Handle scroll to track active section
@@ -165,10 +166,10 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <Link to="/login" className="btn-login">
+                <Link to={ROUTES.LOGIN} className="btn-login">
                   Login
                 </Link>
-                <Link to="/signup" className="btn-signup">
+                <Link to={ROUTES.SIGNUP} className="btn-signup">
                   Sign Up
                 </Link>
               </>
@@ -180,7 +181,7 @@ const Navbar = () => {
         <div className="navbar-actions">
           {isAuthenticated ? (
             <>
-              <Link to="/dashboard" className="btn-login">
+              <Link to={ROUTES.DASHBOARD} className="btn-login">
                 Dashboard
               </Link>
               <button
@@ -198,10 +199,10 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <Link to="/login" className="btn-login">
+              <Link to={ROUTES.LOGIN} className="btn-login">
                 Login
               </Link>
-              <Link to="/signup" className="btn-signup">
+              <Link to={ROUTES.SIGNUP} className="btn-signup">
                 Sign Up
               </Link>
             </>

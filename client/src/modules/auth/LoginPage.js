@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { useAuth } from "../../context/AuthContext.js";
+import { ROUTES } from "../../config/routes.js";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard");
+      navigate(ROUTES.DASHBOARD);
     }
   }, [isAuthenticated, navigate]);
 
@@ -36,7 +37,7 @@ const LoginPage = () => {
       const result = await login(formData.email, formData.password);
       console.log("Login successful:", result);
       // Redirect to dashboard after successful login
-      navigate("/dashboard");
+      navigate(ROUTES.DASHBOARD);
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");
       console.error("Login error:", err);
@@ -50,7 +51,7 @@ const LoginPage = () => {
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-header">
-            <Link to="/" className="auth-logo">
+            <Link to={ROUTES.HOME} className="auth-logo">
               RxFlow
             </Link>
             <h1>Welcome Back</h1>
@@ -110,7 +111,7 @@ const LoginPage = () => {
           <div className="auth-footer">
             <p>
               Don't have an account?{" "}
-              <Link to="/signup" className="auth-switch-link">
+              <Link to={ROUTES.SIGNUP} className="auth-switch-link">
                 Sign up
               </Link>
             </p>

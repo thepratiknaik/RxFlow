@@ -1,0 +1,33 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: rxflow-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - client
+      - server
+    restart: unless-stopped
+
+  client:
+    image: asrivastaava/rxflow-client:${RXFLOW_TAG}
+    container_name: rxflow-client
+    restart: unless-stopped
+
+  server:
+    image: asrivastaava/rxflow-server:${RXFLOW_TAG}
+    container_name: rxflow-server
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: rxflow-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # only update these containers
+    command: --interval 30 --cleanup rxflow-client rxflow-server
+    restart: unless-stopped

@@ -5,17 +5,18 @@ import SignupPage from "../modules/auth/SignupPage";
 import DashboardPage from "../modules/dashboard/DashboardPage";
 import ProtectedRoute from "../components/ProtectedRoute.js";
 import { AuthProvider } from "../context/AuthContext.js";
+import { ROUTES } from "../config/routes.js";
 
 const AppRoutes = () => {
   return (
     <Router>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<WebsitePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          <Route path={ROUTES.HOME} element={<WebsitePage />} />
+          <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
           <Route
-            path="/dashboard"
+            path={ROUTES.DASHBOARD}
             element={
               <ProtectedRoute>
                 <DashboardPage />

@@ -1,22 +1,23 @@
-// API Configuration
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+import { API_BASE_URL, API_ENDPOINTS } from "../config/routes.js";
 
 class ApiService {
   // Authentication endpoints
   async register(fullname, email, password, confirmPassword) {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.AUTH.REGISTER}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullname,
+          email,
+          password,
+          confirmPassword,
+        }),
       },
-      body: JSON.stringify({
-        fullname,
-        email,
-        password,
-        confirmPassword,
-      }),
-    });
+    );
 
     const data = await response.json();
 
@@ -34,7 +35,7 @@ class ApiService {
   }
 
   async login(email, password) {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -67,7 +68,7 @@ class ApiService {
       return null;
     }
 
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.ME}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -92,7 +93,7 @@ class ApiService {
     const token = localStorage.getItem("token");
 
     if (token) {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
+      await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGOUT}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

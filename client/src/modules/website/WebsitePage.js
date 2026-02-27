@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import Navbar from "../../components/Navbar";
+import { ROUTES } from "../../config/routes.js";
 import "./WebsitePage.css";
 
 const handleSubmit = (event) => {
@@ -463,7 +464,7 @@ const WebsitePage = () => {
                 <a href="#">Careers</a>
               </li>
               <li>
-                <a href="/">Contact</a>
+                <a href={ROUTES.HOME}>Contact</a>
               </li>
             </ul>
           </div>
