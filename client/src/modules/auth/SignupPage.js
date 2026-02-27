@@ -1,30 +1,62 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "./SignupPage.css";
+import { useAuth } from "../../context/AuthContext.js";
 
 const SignupPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated, register } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: "",
+    fullname: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setError(""); // Clear error on input change
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement signup logic
+    setError("");
+
+    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords don't match!");
       return;
     }
-    console.log("Signup submitted:", formData);
+
+    setLoading(true);
+
+    try {
+      const result = await register(
+        formData.fullname,
+        formData.email,
+        formData.password,
+        formData.confirmPassword,
+      );
+      console.log("Signup successful:", result);
+      // Redirect to dashboard after successful signup
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Signup failed. Please try again.");
+      console.error("Signup error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,16 +72,19 @@ const SignupPage = () => {
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit}>
+            {error && <div className="error-message">{error}</div>}
+
             <div className="form-group">
-              <label htmlFor="fullName">Full Name</label>
+              <label htmlFor="fullname">Full Name</label>
               <input
                 type="text"
-                id="fullName"
-                name="fullName"
-                value={formData.fullName}
+                id="fullname"
+                name="fullname"
+                value={formData.fullname}
                 onChange={handleChange}
                 placeholder="John Doe"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -63,6 +98,7 @@ const SignupPage = () => {
                 onChange={handleChange}
                 placeholder="you@example.com"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -77,6 +113,7 @@ const SignupPage = () => {
                 placeholder="Create a strong password"
                 required
                 minLength="8"
+                disabled={loading}
               />
             </div>
 
@@ -91,12 +128,13 @@ const SignupPage = () => {
                 placeholder="Confirm your password"
                 required
                 minLength="8"
+                disabled={loading}
               />
             </div>
 
             <div className="form-options">
               <label className="checkbox-label">
-                <input type="checkbox" required />
+                <input type="checkbox" required disabled={loading} />
                 <span>
                   I agree to the{" "}
                   <a href="#terms" className="terms-link">
@@ -106,8 +144,12 @@ const SignupPage = () => {
               </label>
             </div>
 
-            <button type="submit" className="auth-submit-btn">
-              Create Account
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={loading}
+            >
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 

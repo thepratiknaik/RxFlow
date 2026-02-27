@@ -155,6 +155,16 @@
   transform: translateY(0);
 }
 
+.error-message {
+  background-color: #fed7d7;
+  color: #c53030;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  border-left: 4px solid #c53030;
+}
+
 .auth-footer {
   text-align: center;
   padding-top: 1.5rem;

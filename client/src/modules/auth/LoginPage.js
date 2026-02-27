@@ -1,24 +1,48 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "./LoginPage.css";
+import { useAuth } from "../../context/AuthContext.js";
 
 const LoginPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated, login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setError(""); // Clear error on input change
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    console.log("Login submitted:", formData);
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await login(formData.email, formData.password);
+      console.log("Login successful:", result);
+      // Redirect to dashboard after successful login
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Login failed. Please try again.");
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,6 +58,8 @@ const LoginPage = () => {
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit}>
+            {error && <div className="error-message">{error}</div>}
+
             <div className="form-group">
               <label htmlFor="email">Email Address</label>
               <input
@@ -44,6 +70,7 @@ const LoginPage = () => {
                 onChange={handleChange}
                 placeholder="you@example.com"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -57,12 +84,13 @@ const LoginPage = () => {
                 onChange={handleChange}
                 placeholder="Enter your password"
                 required
+                disabled={loading}
               />
             </div>
 
             <div className="form-options">
               <label className="checkbox-label">
-                <input type="checkbox" />
+                <input type="checkbox" disabled={loading} />
                 <span>Remember me</span>
               </label>
               <a href="#forgot" className="forgot-link">
@@ -70,8 +98,12 @@ const LoginPage = () => {
               </a>
             </div>
 
-            <button type="submit" className="auth-submit-btn">
-              Sign In
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 

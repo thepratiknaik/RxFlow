@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.js";
 import "./Navbar.css";
 
 const Navbar = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
+
+  const handleLogout = async () => {
+    await logout();
+    setMobileMenuOpen(false);
+    navigate("/");
+  };
 
   // Handle scroll to track active section
   useEffect(() => {
@@ -136,23 +145,67 @@ const Navbar = () => {
 
           {/* Action buttons inside menu for mobile */}
           <div className="navbar-actions-mobile">
-            <Link to="/login" className="btn-login">
-              Login
-            </Link>
-            <Link to="/signup" className="btn-signup">
-              Sign Up
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard" className="btn-login">
+                  Dashboard
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="btn-signup"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "white",
+                  }}
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn-login">
+                  Login
+                </Link>
+                <Link to="/signup" className="btn-signup">
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </nav>
 
         {/* PART 3: Action Buttons Section (Desktop only) */}
         <div className="navbar-actions">
-          <Link to="/login" className="btn-login">
-            Login
-          </Link>
-          <Link to="/signup" className="btn-signup">
-            Sign Up
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link to="/dashboard" className="btn-login">
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="btn-signup"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "white",
+                }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="btn-login">
+                Login
+              </Link>
+              <Link to="/signup" className="btn-signup">
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
