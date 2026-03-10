@@ -772,6 +772,64 @@ footer {
   /* Animation will be triggered by scroll via data-animate */
 }
 
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1.2rem;
+}
+
+.footer-brand-mark {
+  width: 3.5rem;
+  height: 3.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem;
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.28), transparent 60%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 12px 28px rgba(3, 10, 24, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+}
+
+.footer-brand-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.16));
+}
+
+.footer-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  line-height: 1;
+}
+
+.footer-brand-text h4 {
+  margin-bottom: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.footer-brand-text span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1;
+}
+
 .footer-section h4 {
   margin-bottom: 1.2rem;
   color: var(--accent);
@@ -855,6 +913,24 @@ footer {
   .footer-container {
     gap: 1.5rem;
   }
+
+  .footer-brand {
+    gap: 0.7rem;
+  }
+
+  .footer-brand-mark {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.95rem;
+  }
+
+  .footer-brand-text h4 {
+    font-size: 1.35rem;
+  }
+
+  .footer-brand-text span {
+    font-size: 0.65rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -883,5 +959,21 @@ footer {
 
   .submit-btn {
     padding: 0.9rem;
+  }
+
+  .footer-brand-mark {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0.35rem;
+    border-radius: 0.85rem;
+  }
+
+  .footer-brand-text h4 {
+    font-size: 1.15rem;
+  }
+
+  .footer-brand-text span {
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
   }
 }

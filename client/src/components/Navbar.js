@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 import { ROUTES } from "../config/routes.js";
 import "./Navbar.css";
+import logo from "../assets/logo.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -78,7 +79,13 @@ const Navbar = () => {
         {/* PART 1: Logo/Brand Section */}
         <div className="navbar-brand">
           <a href="/" className="logo">
-            RxFlow
+            <span className="logo-mark">
+              <img src={logo} alt="RxFlow" className="logo-image" />
+            </span>
+            <span className="logo-text">
+              <span className="logo-title">RxFlow</span>
+              <span className="logo-tagline">Pharmacy workflow</span>
+            </span>
           </a>
         </div>
 

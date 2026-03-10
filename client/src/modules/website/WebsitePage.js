@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import Navbar from "../../components/Navbar";
 import { ROUTES } from "../../config/routes.js";
+import logo from "../../assets/logo.png";
 import "./WebsitePage.css";
 
 const handleSubmit = (event) => {
@@ -428,7 +429,19 @@ const WebsitePage = () => {
       <footer>
         <div className="footer-container" data-animate>
           <div className="footer-section" data-animate>
-            <h4>RxFlow</h4>
+            <div className="footer-brand logo">
+              <span className="footer-brand-mark">
+                <img src={logo} alt="RxFlow" className="footer-brand-image" />
+              </span>
+              <div className="footer-brand-text">
+                {/* <h4>RxFlow</h4>
+                <span>Pharmacy workflow</span> */}
+                <span className="logo-text">
+                  <span className="logo-title">RxFlow</span>
+                  <span className="logo-tagline">Pharmacy workflow</span>
+                </span>
+              </div>
+            </div>
             <p>
               Modern pharmacy management for independent and community
               pharmacies.
