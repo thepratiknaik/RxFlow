@@ -158,7 +158,7 @@ pipeline {
         branch 'dev'
       }
       steps {
-        sh """#!/bin/bash
+        sh '''#!/bin/bash
           set -e
 
           curl -X POST \
@@ -211,7 +211,7 @@ pipeline {
               esac
             sleep 10
           done
-      """
+      '''
       }
     }
 
