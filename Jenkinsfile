@@ -16,7 +16,7 @@ pipeline {
     CLIENT_IMAGE = "asrivastaava/rxflow-client"
     SERVER_IMAGE = "asrivastaava/rxflow-server"
 
-    DEV_HOST  = "ec2-user@ec2-3-137-214-217.us-east-2.compute.amazonaws.com"
+    DEV_HOST  = "ec2-user@ec2-18-223-171-244.us-east-2.compute.amazonaws.com"
     PROD_HOST = "ec2-user@ec2-3-135-219-253.us-east-2.compute.amazonaws.com"
 
     TESTRIGOR_APP_ID = "CX3XSkSha6AeLseJu"
