@@ -158,65 +158,60 @@ pipeline {
         branch 'dev'
       }
       steps {
-        withCredentials([string(credentialsId: TESTRIGOR_TOKEN_CRED, variable: 'TESTRIGOR_AUTH_TOKEN')]) {
-          sh '''#!/bin/bash
-set -e
+        sh """#!/bin/bash
+          set -e
 
-curl -X POST \
-  -H 'Content-type: application/json' \
-  -H "auth-token: ${TESTRIGOR_AUTH_TOKEN}" \
-  --data '{"forceCancelPreviousTesting":true,"storedValues":{"storedValueName1":"Value"}}' \
-  "https://api.testrigor.com/api/v1/apps/${TESTRIGOR_APP_ID}/retest"
+          curl -X POST \
+            -H 'Content-type: application/json' \
+            -H 'auth-token: 7db63e5a-1e3d-4653-b6b2-05703ba8c730' \
+            --data '{"forceCancelPreviousTesting":true,"storedValues":{"storedValueName1":"Value"}}' \
+            https://api.testrigor.com/api/v1/apps/CX3XSkSha6AeLseJu/retest
 
-sleep 10
+          sleep 10
 
-while true
-do
-  echo " "
-  echo "==================================="
-  echo " Checking run status"
-  echo "==================================="
-
-  response=$(curl -i -o - -s -X GET "https://api.testrigor.com/api/v1/apps/${TESTRIGOR_APP_ID}/status" \
-    -H "auth-token: ${TESTRIGOR_AUTH_TOKEN}" \
-    -H 'Accept: application/json')
-
-  code=$(echo "$response" | grep HTTP | awk '{print $2}')
-  body=$(echo "$response" | sed -n '/{/,/}/p')
-
-  echo "Status code: $code"
-  echo "Response: $body"
-
-  case $code in
-    4*|5*)
-      echo "Error calling API"
-      exit 1
-      ;;
-    200)
-      echo "Test finished successfully"
-      exit 0
-      ;;
-    227|228)
-      echo "Test is not finished yet"
-      ;;
-    229)
-      echo "Test canceled"
-      exit 1
-      ;;
-    230)
-      echo "Test finished but failed"
-      exit 1
-      ;;
-    *)
-      echo "Unknown status"
-      exit 1
-      ;;
-  esac
-
-  sleep 10
-done
-'''
-        }
+          while true
+          do
+            echo " "
+            echo "==================================="
+            echo " Checking run status"
+            echo "==================================="
+            response=$(curl -i -o - -s -X GET 'https://api.testrigor.com/api/v1/apps/CX3XSkSha6AeLseJu/status' -H 'auth-token: 7db63e5a-1e3d-4653-b6b2-05703ba8c730' -H 'Accept: application/json')
+            code=$(echo "$response" | grep HTTP |  awk '{print $2}')
+            body=$(echo "$response" | sed -n '/{/,/}/p')
+            echo "Status code: " $code
+            echo "Response: " $body
+            case $code in
+              4*|5*)
+                # 400 or 500 errors
+                echo "Error calling API"
+                exit 1
+                ;;
+              200)
+                # 200: successfully finished
+                echo "Test finished successfully"
+                exit 0
+                ;;
+              227|228)
+                # 227: New - 228: In progress
+                echo "Test is not finished yet"
+                ;;
+              229)
+                # 229: Canceled
+                echo "Test canceled"
+                exit 1
+                ;;
+              230)
+                # 230: Failed
+                echo "Test finished but failed"
+                exit 1
+                ;;
+              *)
+                echo "Unknown status"
+                exit 1
+              esac
+            sleep 10
+          done
+      """
       }
     }
 
