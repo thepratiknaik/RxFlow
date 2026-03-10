@@ -16,7 +16,7 @@ pipeline {
     CLIENT_IMAGE = "asrivastaava/rxflow-client"
     SERVER_IMAGE = "asrivastaava/rxflow-server"
 
-    DEV_HOST  = "ec2-user@your-dev-server"
+    DEV_HOST  = "ec2-user@ec2-3-137-214-217.us-east-2.compute.amazonaws.com"
     PROD_HOST = "ec2-user@your-prod-server"
 
     TESTRIGOR_APP_ID = "CX3XSkSha6AeLseJu"
@@ -110,6 +110,18 @@ pipeline {
       }
     }
 
+    // stage("Push Images") {
+    //   steps {
+    //     withCredentials([usernamePassword(credentialsId: DOCKER_CREDS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+    //       sh """
+    //         set -e
+    //         echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+    //         docker push ${CLIENT_IMAGE}:${TAG}
+    //         docker push ${SERVER_IMAGE}:${TAG}
+    //       """
+    //     }
+    //   }
+    // }
     stage("Push Images") {
       steps {
         withCredentials([usernamePassword(credentialsId: DOCKER_CREDS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -117,7 +129,6 @@ pipeline {
             set -e
             echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
             docker push ${CLIENT_IMAGE}:${TAG}
-            // docker push ${SERVER_IMAGE}:${TAG}
           """
         }
       }
