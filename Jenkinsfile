@@ -17,7 +17,7 @@ pipeline {
     SERVER_IMAGE = "asrivastaava/rxflow-server"
 
     DEV_HOST  = "ec2-user@ec2-3-137-214-217.us-east-2.compute.amazonaws.com"
-    PROD_HOST = "ec2-user@your-prod-server"
+    PROD_HOST = "ec2-user@ec2-3-135-219-253.us-east-2.compute.amazonaws.com"
 
     TESTRIGOR_APP_ID = "CX3XSkSha6AeLseJu"
   }
@@ -143,6 +143,7 @@ pipeline {
           sh """
             set -e
             ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 ${DEV_HOST} '
+              cd /opt/rxflow &&
               export RXFLOW_TAG=${TAG} &&
               docker compose pull &&
               docker compose up -d
