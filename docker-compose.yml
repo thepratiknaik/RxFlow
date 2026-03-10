@@ -3,27 +3,27 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
-    image: rxflow-client:latest
+    # image: rxflow-client:latest
     container_name: rxflow-client
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - REACT_APP_API_URL=http://server:5000/api
-    depends_on:
-      - server
+      - VITE_API_BASE_URL=http://server:5000/api
+    # depends_on:
+    #   - server
     restart: unless-stopped
 
-  server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    image: rxflow-server:latest
-    container_name: rxflow-server
-    ports:
-      - "5000:5000"
-    env_file:
-      - ./server/.env
-    environment:
-      - NODE_ENV=production
-    restart: unless-stopped
+  # server:
+  #   build:
+  #     context: ./server
+  #     dockerfile: Dockerfile
+  #   # image: rxflow-server:latest
+  #   container_name: rxflow-server
+  #   ports:
+  #     - "5000:5000"
+  #   env_file:
+  #     - ./server/.env
+  #   environment:
+  #     - NODE_ENV=production
+  #   restart: unless-stopped
