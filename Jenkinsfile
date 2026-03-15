@@ -85,19 +85,19 @@ pipeline {
       }
     }
 
-    // stage("Build Images") {
-    //   steps {
-    //     sh """
-    //       set -e
-    //       docker build -t ${CLIENT_IMAGE}:${TAG} \\
-    //         --build-arg VITE_API_BASE_URL=/api \\
-    //         -f ./client/Dockerfile ./client
+    stage("Build Images") {
+      steps {
+        sh """
+          set -e
+          docker build -t ${CLIENT_IMAGE}:${TAG} \\
+            --build-arg VITE_API_BASE_URL=/api \\
+            -f ./client/Dockerfile ./client
 
-    //       docker build -t ${SERVER_IMAGE}:${TAG} \\
-    //         -f ./server/Dockerfile ./server
-    //     """
-    //   }
-    // }
+          docker build -t ${SERVER_IMAGE}:${TAG} \\
+            -f ./server/Dockerfile ./server
+        """
+      }
+    }
 
     stage("Build Images") {
       steps {
@@ -110,18 +110,18 @@ pipeline {
       }
     }
 
-    // stage("Push Images") {
-    //   steps {
-    //     withCredentials([usernamePassword(credentialsId: DOCKER_CREDS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-    //       sh """
-    //         set -e
-    //         echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-    //         docker push ${CLIENT_IMAGE}:${TAG}
-    //         docker push ${SERVER_IMAGE}:${TAG}
-    //       """
-    //     }
-    //   }
-    // }
+    stage("Push Images") {
+      steps {
+        withCredentials([usernamePassword(credentialsId: DOCKER_CREDS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh """
+            set -e
+            echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+            docker push ${CLIENT_IMAGE}:${TAG}
+            docker push ${SERVER_IMAGE}:${TAG}
+          """
+        }
+      }
+    }
     stage("Push Images") {
       steps {
         withCredentials([usernamePassword(credentialsId: DOCKER_CREDS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
