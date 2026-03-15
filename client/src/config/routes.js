@@ -16,5 +16,25 @@ export const API_ENDPOINTS = {
   },
 };
 
+const normalizeApiBaseUrl = (value) => {
+  if (!value || typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().replace(/\/+$/, "");
+};
+
+const getDefaultApiBaseUrl = () => {
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return "http://localhost:5000/api";
+  }
+
+  return "/api";
+};
+
 // API Base URL
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = normalizeApiBaseUrl(
+  process.env.REACT_APP_API_BASE_URL ||
+    process.env.VITE_API_BASE_URL ||
+    getDefaultApiBaseUrl(),
+);

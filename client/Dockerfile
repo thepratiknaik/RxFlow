@@ -4,6 +4,7 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Accept build arguments
+ARG REACT_APP_API_BASE_URL
 ARG VITE_API_BASE_URL
 
 # Copy package files
@@ -16,7 +17,8 @@ RUN npm install
 COPY public ./public
 COPY src ./src
 
-# Set environment variable for build time
+# Set environment variables for build time
+ENV REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 # Build the application
