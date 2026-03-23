@@ -32,6 +32,12 @@ export const addDrugPullJob = async (payload) =>
 
 export const getDrugPullJob = async (jobId) => drugPullQueue.getJob(jobId);
 
+export const listDrugPullJobs = async ({
+  states = ["waiting", "active", "delayed", "completed", "failed"],
+  start = 0,
+  end = 99,
+} = {}) => drugPullQueue.getJobs(states, start, end, true);
+
 export const checkRedisHealth = async () => {
   try {
     const pong = await redisConnection.ping();

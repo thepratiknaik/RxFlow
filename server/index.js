@@ -73,10 +73,8 @@ const startServer = async () => {
     app.use(express.static(path.join(__dirname, "public")));
 
     // Routes
-    app.use(
-      "/assets",
-      express.static(path.join(__dirname, "..", "client", "src", "assets")),
-    );
+    // Serve UI assets from the server package so they are available in Docker images.
+    app.use("/assets", express.static(path.join(__dirname, "assets")));
 
     app.get("/", (req, res) => {
       res.sendFile(path.join(__dirname, "public", "index.html"));

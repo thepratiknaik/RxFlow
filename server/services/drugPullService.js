@@ -2,6 +2,12 @@ const OPEN_FDA_NDC_URL = "https://api.fda.gov/drug/ndc.json";
 
 import Drug from "../models/Drug.js";
 
+const sanitizeSearchToken = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/[+\-!(){}\[\]^"~?:\\/]|&&|\|\|/g, " ")
+    .replace(/\s+/g, " ");
+
 const normalizeFirst = (value) => {
   if (Array.isArray(value)) {
     return value[0] || null;
@@ -15,12 +21,42 @@ const buildSearchQuery = (searchTerm) => {
     return "";
   }
 
-  const escaped = String(searchTerm).trim().replace(/"/g, "");
+  const escaped = sanitizeSearchToken(searchTerm);
   if (!escaped) {
     return "";
   }
 
-  return `brand_name:${escaped}*+generic_name:${escaped}*`;
+  if (escaped.includes(" ")) {
+    return `(brand_name:"${escaped}" OR generic_name:"${escaped}")`;
+  }
+
+  return `(brand_name:${escaped}* OR generic_name:${escaped}*)`;
+};
+
+const createOpenFdaError = ({ payload, response, url }) => {
+  const status = response?.status || 500;
+  const apiMessage = payload?.error?.message || "Failed to fetch data from openFDA.";
+  const details = payload?.error?.details
+    ? String(payload.error.details).replace(/\s+/g, " ").trim()
+    : null;
+
+  const messageParts = [`openFDA request failed (${status}): ${apiMessage}`];
+
+  if (details) {
+    messageParts.push(`Details: ${details}`);
+  }
+
+  if (url) {
+    messageParts.push(`URL: ${url}`);
+  }
+
+  const error = new Error(messageParts.join(" "));
+  error.name = "OpenFdaRequestError";
+  error.status = status;
+  error.details = details;
+  error.requestUrl = url;
+
+  return error;
 };
 
 export const fetchDrugsFromOpenFda = async ({
@@ -34,16 +70,18 @@ export const fetchDrugsFromOpenFda = async ({
   url.searchParams.set("limit", String(normalizedLimit));
 
   if (query) {
-    url.searchParams.set("search", query);
+    url.search += `&search=${encodeURIComponent(query)}`;
   }
 
   const response = await fetch(url.toString());
-  const payload = await response.json();
+  const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message =
-      payload?.error?.message || "Failed to fetch data from openFDA.";
-    throw new Error(message);
+    throw createOpenFdaError({
+      payload,
+      response,
+      url: url.toString(),
+    });
   }
 
   const normalizedResults = (payload?.results || [])

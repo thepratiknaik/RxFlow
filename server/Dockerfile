@@ -1,20 +1,27 @@
-# Use Node.js LTS image
-FROM node:20-alpine
+FROM node:20-alpine AS base
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --omit=dev
+FROM base AS dev
 
-# Copy app files
+RUN npm ci
+
 COPY . .
 
-# Expose port
+ENV NODE_ENV=development
+
 EXPOSE 5000
 
-# Start server
+CMD ["npm", "run", "dev", "--", "--legacy-watch"]
+
+FROM base AS production
+
+RUN npm ci --omit=dev
+
+COPY . .
+
+EXPOSE 5000
+
 CMD ["npm", "start"]

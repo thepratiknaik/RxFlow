@@ -1,40 +1,40 @@
-# Stage 1: Build the React application
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
+FROM base AS dev
+
+RUN npm ci
+
+ENV NODE_ENV=development
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+
+FROM base AS builder
+
 RUN npm ci
 
 # Copy environment file so react-scripts can read REACT_APP_* values at build time
 COPY .env ./.env
-
-# Copy the rest of the application
 COPY public ./public
 COPY src ./src
 
-# Build the application
 RUN npm run build
 
-# Stage 2: Serve the built application
-FROM node:20-alpine
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install a simple static server
 RUN npm install -g serve
 
-# Copy the built application from builder stage
 COPY --from=builder /app/build ./build
 
-# Expose port
 EXPOSE 3000
 
-# Set environment variable for production
 ENV NODE_ENV=production
 
-# Start the application
 CMD ["serve", "-s", "build", "-l", "3000"]

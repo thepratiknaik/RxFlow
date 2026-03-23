@@ -173,6 +173,12 @@ const endpointMetadata = {
       "Returns queue status, attempts, and latest result for a queued drug pull job.",
     authRequired: true,
   },
+  "GET /api/drugs/pull-jobs": {
+    name: "List Pull Jobs",
+    description:
+      "Returns recent queued/active/delayed/completed/failed pull jobs with per-state summary.",
+    authRequired: true,
+  },
   "GET /api/drugs/pull-audits": {
     name: "Pull Audit Logs",
     description:

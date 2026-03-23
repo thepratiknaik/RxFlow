@@ -5,6 +5,7 @@ import {
   addDrugPullJob,
   checkRedisHealth,
   getDrugPullJob,
+  listDrugPullJobs,
 } from "../queues/drugPullQueue.js";
 
 const toLimit = (value, fallback = 25, max = 100) =>
@@ -40,12 +41,15 @@ export const pullDrugs = async (req, res) => {
 
     await audit.update({ jobid: String(job.id) });
 
+    const statusEndpoint = `/api/drugs/pull-jobs/${String(job.id)}`;
+
     return res.status(202).json({
       success: true,
       message: "Drug pull job queued successfully.",
       data: {
         auditId: audit.id,
         jobId: String(job.id),
+        statusEndpoint,
         searchTerm,
         requestedLimit: limit,
         status: "queued",
@@ -92,6 +96,66 @@ export const getDrugPullStatus = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to get job status.",
+    });
+  }
+};
+
+export const listDrugPullJobsStatus = async (req, res) => {
+  try {
+    const limit = toLimit(req.query?.limit, 50, 200);
+    const jobs = await listDrugPullJobs({
+      start: 0,
+      end: Math.max(limit - 1, 0),
+    });
+
+    const jobsWithState = await Promise.all(
+      jobs.map(async (job) => {
+        const state = await job.getState();
+        const audit = await DrugPullAudit.findOne({
+          where: { jobid: String(job.id) },
+        });
+
+        return {
+          jobId: String(job.id),
+          name: job.name,
+          state,
+          progress: job.progress || 0,
+          attemptsMade: job.attemptsMade,
+          failedReason: job.failedReason || null,
+          createdAt: job.timestamp
+            ? new Date(job.timestamp).toISOString()
+            : null,
+          processedAt: job.processedOn
+            ? new Date(job.processedOn).toISOString()
+            : null,
+          finishedAt: job.finishedOn
+            ? new Date(job.finishedOn).toISOString()
+            : null,
+          data: job.data || null,
+          result: job.returnvalue || null,
+          audit,
+        };
+      }),
+    );
+
+    const summary = jobsWithState.reduce(
+      (acc, job) => {
+        acc.total += 1;
+        acc.byState[job.state] = (acc.byState[job.state] || 0) + 1;
+        return acc;
+      },
+      { total: 0, byState: {} },
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: jobsWithState,
+      summary,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to list drug pull jobs.",
     });
   }
 };

@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getDrugPullStatus,
+  listDrugPullJobsStatus,
   listDrugPullAudits,
   listDrugs,
   pullDrugs,
@@ -15,6 +16,12 @@ export const routeConfig = {
 };
 
 router.get("/", verifyToken, listDrugs);
+router.get(
+  "/pull-jobs",
+  verifyToken,
+  authorize(["admin", "pharmacist"]),
+  listDrugPullJobsStatus,
+);
 router.get(
   "/pull-jobs/:jobId",
   verifyToken,

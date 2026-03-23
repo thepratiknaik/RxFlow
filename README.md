@@ -66,6 +66,22 @@ RxFlow is built as a standard 3-tier web application:
 * **Database:** PostgreSQL
 * **DevOps:** Docker & Docker Compose
 
+## Docker Development
+
+Use the development override when you want containerized hot reload for both services:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+This mounts `./client` and `./server` into their containers, preserves container-side `node_modules` with named volumes, runs the React dev server for the client, and runs `nodemon` for the server with Docker-friendly file watching.
+
+Production mode remains the default:
+
+```bash
+docker compose up --build
+```
+
 ---
 
 ## 🏗 System Architecture

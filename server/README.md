@@ -23,6 +23,7 @@ DB_PASSWORD=password
 JWT_SECRET=your_jwt_secret_key_change_this_in_production_please_use_strong_random_string
 JWT_EXPIRE=7d
 NODE_ENV=development
+REDIS_URL=redis://127.0.0.1:6379
 ```
 
 3. **Test database connection (optional):**
@@ -36,6 +37,51 @@ npm run test:db
 ```bash
 npm run dev
 ```
+
+## Run Locally Without Docker
+
+Use this flow when running client, server, and Redis directly in terminals.
+
+1. Start Redis locally (outside Docker):
+
+- If Redis is already installed on your machine:
+
+```bash
+redis-server
+```
+
+- Optional health check in another terminal:
+
+```bash
+redis-cli ping
+```
+
+Expected response is `PONG`.
+
+2. Start backend API:
+
+```bash
+cd server
+npm install
+npm run dev
+```
+
+3. Start frontend client in a separate terminal:
+
+```bash
+cd client
+npm install
+npm start
+```
+
+4. Open the app:
+
+- Client: http://localhost:3000
+- API: http://localhost:5000/api/health
+
+### Windows Note
+
+If `redis-server` is not recognized in PowerShell, install Redis for local development using your preferred method (native Redis distribution, WSL, or Memurai), then run Redis again and verify with `redis-cli ping`.
 
 Or production:
 
