@@ -11,6 +11,10 @@ dotenv.config();
 
 import connectDB from "./config/db.js";
 import { buildApiDocs } from "./docs/apiDocs.js";
+import "./models/User.js";
+import "./models/Drug.js";
+import "./models/DrugPullAudit.js";
+import { startDrugPullWorker } from "./workers/drugPullWorker.js";
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -52,6 +56,7 @@ const loadRouteModules = async () => {
 const startServer = async () => {
   try {
     await connectDB();
+    startDrugPullWorker();
 
     // Middleware
     app.use(cors());

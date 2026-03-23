@@ -138,6 +138,47 @@ const endpointMetadata = {
     description:
       "Validates the active token and returns a logout confirmation.",
   },
+  "GET /api/drugs": {
+    name: "List Drugs",
+    description:
+      "Returns paginated drugs stored in the local catalog. Supports search by brand, generic name, or NDC.",
+    authRequired: true,
+  },
+  "POST /api/drugs/pull": {
+    name: "Pull Drugs",
+    description:
+      "Queues a background job that pulls drug records from openFDA and upserts them into the local drugs table.",
+    authRequired: true,
+    requestBody: {
+      label: "Drug pull payload",
+      fields: [
+        {
+          name: "searchTerm",
+          type: "string",
+          required: false,
+          example: "amoxicillin",
+        },
+        {
+          name: "limit",
+          type: "number",
+          required: false,
+          example: 25,
+        },
+      ],
+    },
+  },
+  "GET /api/drugs/pull-jobs/:jobId": {
+    name: "Pull Job Status",
+    description:
+      "Returns queue status, attempts, and latest result for a queued drug pull job.",
+    authRequired: true,
+  },
+  "GET /api/drugs/pull-audits": {
+    name: "Pull Audit Logs",
+    description:
+      "Returns paginated audit history of drug pull jobs including status and row counts.",
+    authRequired: true,
+  },
 };
 
 const buildExampleBody = (requestBody) => {

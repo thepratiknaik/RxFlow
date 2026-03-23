@@ -1,31 +1,26 @@
 # Stage 1: Build the React application
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
-
-# Accept build arguments
-ARG REACT_APP_API_BASE_URL
-ARG VITE_API_BASE_URL
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
+
+# Copy environment file so react-scripts can read REACT_APP_* values at build time
+COPY .env ./.env
 
 # Copy the rest of the application
 COPY public ./public
 COPY src ./src
 
-# Set environment variables for build time
-ENV REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-
 # Build the application
 RUN npm run build
 
 # Stage 2: Serve the built application
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
