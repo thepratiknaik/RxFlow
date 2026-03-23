@@ -176,7 +176,7 @@ class ApiService {
     try {
       if (localStorage.getItem("token")) {
         await this.request(API_ENDPOINTS.AUTH.LOGOUT, {
-          method: "POST",
+          method: "GET",
         });
       }
     } finally {

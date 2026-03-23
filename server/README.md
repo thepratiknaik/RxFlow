@@ -158,7 +158,7 @@ The server will automatically sync models with the database on startup.
 
 #### 4. Logout User
 
-- **POST** `/api/auth/logout`
+- **GET** `/api/auth/logout`
 - **Description:** Logout user (token deleted client-side)
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**

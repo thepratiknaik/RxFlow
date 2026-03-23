@@ -172,7 +172,7 @@ export const getMe = async (req, res) => {
 };
 
 // @desc    Logout user (client-side token deletion)
-// @route   POST /api/auth/logout
+// @route   GET /api/auth/logout
 // @access  Private
 export const logout = async (req, res) => {
   res.status(200).json({
@@ -203,7 +203,7 @@ export const resetPassword = async (req, res) => {
         message: "User not found",
       });
     }
-    
+
     user.password = newPassword;
     await user.save();
 

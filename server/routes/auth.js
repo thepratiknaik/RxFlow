@@ -1,15 +1,19 @@
-console.log("Auth routes loaded");
 import express from "express";
 import {
   register,
   login,
   getMe,
   logout,
-  resetPassword 
+  resetPassword,
 } from "../controllers/authController.js";
 import { verifyToken } from "../middleware/auth.js";
 
 const router = express.Router();
+
+export const routeConfig = {
+  basePath: "/api/auth",
+  module: "Auth",
+};
 
 // Public routes
 router.post("/register", register);
@@ -18,6 +22,6 @@ router.post("/reset-password", resetPassword);
 
 // Protected routes
 router.get("/me", verifyToken, getMe);
-router.post("/logout", verifyToken, logout);
+router.get("/logout", verifyToken, logout);
 
 export default router;
