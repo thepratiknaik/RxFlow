@@ -84,6 +84,55 @@ const endpointMetadata = {
     name: "Current User",
     description: "Returns the authenticated user's profile fields.",
   },
+  "PATCH /api/profile": {
+    name: "Update Profile",
+    description:
+      "Updates the authenticated user's profile details such as full name and email.",
+    requestBody: {
+      label: "Profile update payload",
+      fields: [
+        {
+          name: "fullname",
+          type: "string",
+          required: false,
+          example: "John Doe",
+        },
+        {
+          name: "email",
+          type: "string",
+          required: false,
+          example: "john.doe@example.com",
+        },
+      ],
+    },
+  },
+  "PATCH /api/profile/password": {
+    name: "Change Password",
+    description: "Changes the authenticated user's password.",
+    requestBody: {
+      label: "Change password payload",
+      fields: [
+        {
+          name: "currentPassword",
+          type: "string",
+          required: true,
+          example: "password123",
+        },
+        {
+          name: "newPassword",
+          type: "string",
+          required: true,
+          example: "newPassword123",
+        },
+        {
+          name: "confirmPassword",
+          type: "string",
+          required: true,
+          example: "newPassword123",
+        },
+      ],
+    },
+  },
   "GET /api/auth/logout": {
     name: "Logout",
     description:

@@ -137,6 +137,34 @@ code {
   max-width: 100%;
 }
 
+.badge-copy-button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid #b6d0e8;
+  background: #eef6ff;
+  color: #0f6cbd;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.badge-copy-button:hover {
+  border-color: #95bfe6;
+  background: #e3f0ff;
+}
+
+.badge-copy-button[data-state="Copied"] {
+  border-color: #0f766e;
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.badge-copy-button[data-state="Failed"] {
+  border-color: #b42318;
+  background: #fff5f5;
+  color: #b42318;
+}
+
 .hero {
   padding: 30px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(237, 246, 255, 0.92));
@@ -376,7 +404,11 @@ button.secondary {
   display: grid;
   grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.45fr);
   gap: 22px;
-  align-items: start;
+  align-items: stretch;
+}
+
+.content > .section {
+  height: 100%;
 }
 
 .doc-grid,
@@ -387,6 +419,11 @@ button.secondary {
 .stack {
   display: grid;
   gap: 12px;
+}
+
+.tester .doc-list,
+.tester .stack {
+  gap: 14px;
 }
 
 .doc-grid {
@@ -408,6 +445,17 @@ button.secondary {
 .doc-line {
   padding: 12px 14px;
   background: var(--surface-soft);
+}
+
+.tester .doc-line {
+  background: linear-gradient(180deg, #f7fbff 0%, #eef4fb 100%);
+  border: 1px solid #cfdceb;
+  border-radius: 14px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03) inset;
+}
+
+.tester .doc-line strong {
+  color: #0f2a4a;
 }
 
 .code-block,
@@ -466,7 +514,7 @@ button.secondary {
   color: #b42318;
 }
 
-.tester.collapsed .tester-body {
+.tester.hidden {
   display: none;
 }
 
@@ -475,7 +523,10 @@ button.secondary {
 }
 
 .module-card .endpoint-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -497,8 +548,46 @@ button.secondary {
   background: #f8fbff;
 }
 
-#tester {
-  min-height: 100%;
+.directory-method {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 70px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.directory-method.method-get {
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-color: #bfdbfe;
+}
+
+.directory-method.method-post,
+.directory-method.method-put,
+.directory-method.method-patch {
+  color: #c2410c;
+  background: #ffedd5;
+  border-color: #fed7aa;
+}
+
+.directory-method.method-delete {
+  color: #b42318;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.directory-method.method-options,
+.directory-method.method-head {
+  color: #0f766e;
+  background: #d1fae5;
+  border-color: #a7f3d0;
 }
 
 .tester {
@@ -509,39 +598,173 @@ button.secondary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d8e5f2;
+}
+
+.tester-body {
+  display: grid;
+  gap: 20px;
 }
 
 .tester-title {
   min-width: 0;
+  flex: 1 1 auto;
 }
 
-.tester-toggle {
-  border: 1px solid var(--line);
-  background: var(--surface-soft);
-  color: var(--ink);
-  min-height: 36px;
-  padding: 8px 12px;
+.tester-title h3 {
+  font-size: clamp(1.5rem, 2.3vw, 1.9rem);
+  letter-spacing: -0.01em;
+}
+
+.route-copy-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 40px;
+}
+
+.copy-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #c4d7ea;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef5fd 100%);
+  color: #0f2a4a;
+  font-weight: 600;
+  justify-content: flex-start;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.copy-pill-method {
+  width: auto;
+  min-width: 190px;
+  margin-left: auto;
+  align-self: flex-start;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(15, 108, 189, 0.08);
+}
+
+.copy-pill-method strong {
+  font-weight: 800;
+}
+
+.copy-pill-method.method-get strong {
+  color: #1d4ed8;
+}
+
+.copy-pill-method.method-post strong,
+.copy-pill-method.method-put strong,
+.copy-pill-method.method-patch strong {
+  color: #c2410c;
+}
+
+.copy-pill-method.method-delete strong {
+  color: #b42318;
+}
+
+.copy-pill-method.method-options strong,
+.copy-pill-method.method-head strong {
+  color: #0f766e;
+}
+
+.copy-pill:hover {
+  transform: translateY(-1px);
+  border-color: #a9c8e5;
+  background: linear-gradient(180deg, #f4f9ff 0%, #eaf3fe 100%);
+}
+
+.copy-pill code {
+  color: #0f2a4a;
+  font-size: 0.9rem;
+}
+
+.copy-pill-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4f6d8d;
+}
+
+.copy-pill-status {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: #0f6cbd;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e8f1fb;
+  white-space: nowrap;
+}
+
+.copy-pill[data-copy-state="Method copied"],
+.copy-pill[data-copy-state="Path copied"] {
+  border-color: #0f766e;
+  background: #ecfdf5;
+}
+
+.copy-pill[data-copy-state="Method copied"] .copy-pill-status,
+.copy-pill[data-copy-state="Path copied"] .copy-pill-status {
+  color: #0f766e;
+}
+
+.copy-pill[data-copy-state="Copy failed"] {
+  border-color: #b42318;
+  background: #fff5f5;
+}
+
+.copy-pill[data-copy-state="Copy failed"] .copy-pill-status {
+  color: #b42318;
 }
 
 label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   color: var(--muted);
   font-size: 0.92rem;
 }
 
+.tester label {
+  color: #304861;
+  font-weight: 600;
+}
+
 textarea {
   min-height: 120px;
+  border-color: #c5d5e8;
+  background: #fbfdff;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.tester textarea {
+  border-radius: 16px;
+  border-color: #b8cce4;
+  background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%);
+  color: #0f172a;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.tester .actions button {
+  min-width: 132px;
+  box-shadow: 0 6px 16px rgba(15, 108, 189, 0.22);
+}
+
+.tester .actions {
+  margin-top: 8px;
 }
 
 .inline-response {
-  margin-top: 14px;
+  margin-top: 18px;
   padding: 14px;
   border-radius: 14px;
-  background: var(--surface-soft);
-  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #f6fbff 0%, #edf5fd 100%);
+  border: 1px solid #c7d8eb;
   min-width: 0;
 }
 
@@ -574,6 +797,21 @@ textarea {
   .doc-grid,
   .hero-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .route-copy-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tester-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .copy-pill-method {
+    margin-left: 0;
+    width: 100%;
+    min-width: 0;
   }
 
   .section-header,

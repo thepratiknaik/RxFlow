@@ -149,14 +149,11 @@ export const buildApiDocs = ({
     }),
   );
 
-  const defaultOpenEndpoint =
-    endpoints.find((endpoint) => endpoint.path === "/api/health") ||
-    endpoints[0] ||
-    null;
+  const defaultOpenEndpoint = endpoints[0] || null;
 
   return {
     title: "RxFlow API Docs",
-    subtitle: "Simple API docs with built-in endpoint testing.",
+    subtitle: "Explore and test your API endpoints.",
     description:
       "Endpoints are discovered from Express route modules automatically. Add a new route file and it appears in docs.",
     authHeader: "Authorization: Bearer <jwt-token>",

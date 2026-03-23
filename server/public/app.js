@@ -2,6 +2,7 @@ const baseUrl = window.location.origin;
 
 const elements = {
   baseUrl: document.getElementById("base-url"),
+  copyBaseUrlButton: document.getElementById("copy-base-url"),
   pageTitle: document.getElementById("page-title"),
   heroTitle: document.getElementById("hero-title"),
   heroDescription: document.getElementById("hero-description"),
@@ -41,7 +42,10 @@ const prettyJson = (value) => JSON.stringify(value, null, 2);
 
 const getTesterId = (endpoint) => `${endpoint.id}-tester`;
 
+let docsState = null;
+
 let copyButtonStateTimer;
+let baseUrlCopyButtonTimer;
 
 const setCopyButtonState = (label, timeout = 1600) => {
   const button = elements.copyTokenButton;
@@ -89,6 +93,202 @@ const copyTokenToClipboard = async () => {
     fallbackInput.setSelectionRange(0, 0);
     fallbackInput.blur();
   }
+};
+
+const setBadgeCopyButtonState = (button, label, timeout = 1400) => {
+  if (!button) {
+    return;
+  }
+
+  window.clearTimeout(baseUrlCopyButtonTimer);
+  button.dataset.state = label;
+  button.textContent = label;
+
+  baseUrlCopyButtonTimer = window.setTimeout(() => {
+    button.dataset.state = "";
+    button.textContent = "Copy";
+  }, timeout);
+};
+
+const copyBaseUrlToClipboard = async () => {
+  const copied = await copyTextValue(baseUrl);
+  setBadgeCopyButtonState(
+    elements.copyBaseUrlButton,
+    copied ? "Copied" : "Failed",
+  );
+};
+
+const copyTextValue = async (value) => {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch (error) {
+    const fallbackInput = document.createElement("textarea");
+    fallbackInput.value = value;
+    fallbackInput.setAttribute("readonly", "readonly");
+    fallbackInput.style.position = "absolute";
+    fallbackInput.style.left = "-9999px";
+    document.body.appendChild(fallbackInput);
+    fallbackInput.select();
+
+    const copied = document.execCommand("copy");
+    document.body.removeChild(fallbackInput);
+    window.getSelection()?.removeAllRanges();
+    return copied;
+  }
+};
+
+const setInlineCopyButtonState = (button, label, timeout = 1400) => {
+  if (!button) {
+    return;
+  }
+
+  const status = button.querySelector("[data-copy-status]");
+
+  if (status) {
+    status.textContent = label;
+  }
+
+  button.dataset.copyState = label;
+
+  const existingTimerId = Number(button.dataset.copyTimerId || 0);
+  if (existingTimerId) {
+    window.clearTimeout(existingTimerId);
+  }
+
+  const timerId = window.setTimeout(() => {
+    if (status) {
+      status.textContent = "Copy";
+    }
+
+    button.dataset.copyState = "";
+  }, timeout);
+
+  button.dataset.copyTimerId = String(timerId);
+};
+
+const buildExampleBody = (requestBody) => {
+  if (!requestBody?.fields?.length) {
+    return {};
+  }
+
+  return requestBody.fields.reduce((payload, field) => {
+    payload[field.name] = field.example ?? "";
+    return payload;
+  }, {});
+};
+
+const normalizeEndpointPath = (value) => {
+  if (!value || value === "/") {
+    return "/";
+  }
+
+  return value.replace(/\/+$/, "") || "/";
+};
+
+const findEndpoint = (method, path) =>
+  docsState?.endpoints?.find(
+    (endpoint) =>
+      endpoint.method === method &&
+      normalizeEndpointPath(endpoint.path) === normalizeEndpointPath(path),
+  );
+
+const setFieldExample = (endpoint, fieldName, value) => {
+  if (!endpoint?.requestBody?.fields?.length || !value) {
+    return;
+  }
+
+  const targetField = endpoint.requestBody.fields.find(
+    (field) => field.name === fieldName,
+  );
+
+  if (!targetField) {
+    return;
+  }
+
+  targetField.example = value;
+  endpoint.exampleBody = buildExampleBody(endpoint.requestBody);
+};
+
+const refreshEndpointEditors = () => {
+  if (!docsState?.endpoints?.length) {
+    return;
+  }
+
+  docsState.endpoints.forEach((endpoint) => {
+    if (!endpoint.hasBody) {
+      return;
+    }
+
+    const textarea = document.getElementById(`${endpoint.id}-body`);
+
+    if (!textarea || !endpoint.exampleBody) {
+      return;
+    }
+
+    textarea.value = prettyJson(endpoint.exampleBody);
+    resizeTextarea(textarea);
+  });
+};
+
+const applyExampleUpdates = (method, path, fieldUpdates = {}) => {
+  const endpoint = findEndpoint(method, path);
+
+  if (!endpoint) {
+    return;
+  }
+
+  Object.entries(fieldUpdates).forEach(([fieldName, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+
+    setFieldExample(endpoint, fieldName, value);
+  });
+
+  if (!endpoint.exampleBody) {
+    return;
+  }
+
+  const textarea = document.getElementById(`${endpoint.id}-body`);
+
+  if (!textarea) {
+    return;
+  }
+
+  textarea.value = prettyJson(endpoint.exampleBody);
+  resizeTextarea(textarea);
+};
+
+const syncAuthMetadata = ({ fullname, email, password }) => {
+  applyExampleUpdates("POST", "/api/auth/register", {
+    fullname,
+    email,
+    password,
+    confirmPassword: password,
+  });
+
+  applyExampleUpdates("POST", "/api/auth/login", {
+    email,
+    password,
+  });
+};
+
+const syncProfileMetadata = ({ fullname, email, password }) => {
+  applyExampleUpdates("PATCH", "/api/profile", {
+    fullname,
+    email,
+  });
+
+  applyExampleUpdates("PATCH", "/api/profile/password", {
+    currentPassword: password,
+    newPassword: password,
+    confirmPassword: password,
+  });
 };
 
 const renderMetrics = (endpoints) => {
@@ -146,8 +346,8 @@ const renderModules = (modules) => {
                     data-target="${escapeHtml(getTesterId(endpoint))}"
                     aria-label="Open ${escapeHtml(endpoint.name)} tester"
                   >
-                    <strong>${escapeHtml(endpoint.method)}</strong>
-                    <code>${escapeHtml(endpoint.path)}</code>
+                    <strong>${escapeHtml(endpoint.name)}</strong>
+                    <span class="directory-method method-${escapeHtml(endpoint.method.toLowerCase())}">${escapeHtml(endpoint.method)}</span>
                   </button>
                 `,
               )
@@ -163,13 +363,42 @@ const renderTesterCards = (endpoints) => {
   elements.testerList.innerHTML = endpoints
     .map(
       (endpoint) => `
+        ${(() => {
+          const shouldShowPayloadEditor =
+            endpoint.hasBody && endpoint.requestBody?.fields?.length;
+
+          return `
         <article class="tester" id="${escapeHtml(getTesterId(endpoint))}" data-endpoint-card="${escapeHtml(endpoint.id)}">
           <div class="tester-head">
             <div class="tester-title">
               <h3>${escapeHtml(endpoint.name)}</h3>
-              <p><code>${escapeHtml(`${endpoint.method} ${endpoint.path}`)}</code></p>
+              <div class="route-copy-row">
+                <button
+                  type="button"
+                  class="copy-pill"
+                  data-copy-text="${escapeHtml(endpoint.path)}"
+                  data-copy-label="Path"
+                  aria-label="Copy path ${escapeHtml(endpoint.path)}"
+                  title="Copy endpoint path"
+                >
+                  <span class="copy-pill-label">Path</span>
+                  <code>${escapeHtml(endpoint.path)}</code>
+                  <span class="copy-pill-status" data-copy-status>Copy</span>
+                </button>
+              </div>
             </div>
-            <button type="button" class="tester-toggle" data-target="${escapeHtml(getTesterId(endpoint))}">Open</button>
+            <button
+              type="button"
+              class="copy-pill copy-pill-method method-${escapeHtml(endpoint.method.toLowerCase())}"
+              data-copy-text="${escapeHtml(endpoint.method)}"
+              data-copy-label="Method"
+              aria-label="Copy method ${escapeHtml(endpoint.method)}"
+              title="Copy method"
+            >
+              <span class="copy-pill-label">Method</span>
+              <strong>${escapeHtml(endpoint.method)}</strong>
+              <span class="copy-pill-status" data-copy-status>Copy</span>
+            </button>
           </div>
           <div class="tester-body">
             <div class="doc-list">
@@ -209,7 +438,11 @@ const renderTesterCards = (endpoints) => {
                 type="button"
                 data-endpoint="${escapeHtml(endpoint.path)}"
                 data-method="${escapeHtml(endpoint.method)}"
-                ${endpoint.hasBody ? `data-body-id="${escapeHtml(`${endpoint.id}-body`)}"` : ""}
+                ${
+                  shouldShowPayloadEditor
+                    ? `data-body-id="${escapeHtml(`${endpoint.id}-body`)}"`
+                    : ""
+                }
                 ${endpoint.authRequired ? 'data-auth="true"' : ""}
               >Send Request</button>
             </div>
@@ -219,6 +452,8 @@ const renderTesterCards = (endpoints) => {
             </div>
           </div>
         </article>
+          `;
+        })()}
       `,
     )
     .join("");
@@ -233,12 +468,7 @@ const openTester = (targetId, shouldScroll = false) => {
   testerCards.forEach((card) => {
     const isTarget = card.id === targetId;
     card.classList.toggle("active", isTarget);
-    card.classList.toggle("collapsed", !isTarget);
-
-    const toggle = card.querySelector(".tester-toggle");
-    if (toggle) {
-      toggle.textContent = isTarget ? "Open Now" : "Open";
-    }
+    card.classList.toggle("hidden", !isTarget);
   });
 
   moduleLinks.forEach((link) => {
@@ -271,16 +501,17 @@ const sendRequest = async ({
   requiresAuth,
 }) => {
   const container = button.closest(".tester");
+  const normalizedEndpoint = normalizeEndpointPath(endpoint);
   const headers = {};
   const options = { method, headers };
+  let requestPayload = null;
 
   if (bodyId) {
     headers["Content-Type"] = "application/json";
 
     try {
-      options.body = JSON.stringify(
-        JSON.parse(document.getElementById(bodyId).value),
-      );
+      requestPayload = JSON.parse(document.getElementById(bodyId).value);
+      options.body = JSON.stringify(requestPayload);
     } catch (error) {
       renderResponse(
         container,
@@ -325,7 +556,57 @@ const sendRequest = async ({
       elements.tokenInput.value = payload.token;
     }
 
-    if (response.ok && endpoint === "/api/auth/logout") {
+    if (
+      response.ok &&
+      (normalizedEndpoint === "/api/auth/login" ||
+        normalizedEndpoint === "/api/auth/register")
+    ) {
+      syncAuthMetadata({
+        fullname: payload?.user?.fullname || requestPayload?.fullname,
+        email: payload?.user?.email || requestPayload?.email,
+        password: requestPayload?.password,
+      });
+    }
+
+    if (
+      response.ok &&
+      normalizedEndpoint === "/api/profile" &&
+      method === "PATCH"
+    ) {
+      const latestFullname =
+        payload?.user?.fullname || requestPayload?.fullname;
+      const latestEmail = payload?.user?.email || requestPayload?.email;
+
+      syncProfileMetadata({
+        fullname: latestFullname,
+        email: latestEmail,
+      });
+
+      // Keep auth tester payloads aligned with profile email/fullname changes.
+      syncAuthMetadata({
+        fullname: latestFullname,
+        email: latestEmail,
+      });
+    }
+
+    if (
+      response.ok &&
+      normalizedEndpoint === "/api/profile/password" &&
+      method === "PATCH"
+    ) {
+      const latestPassword = requestPayload?.newPassword;
+
+      syncProfileMetadata({
+        password: latestPassword,
+      });
+
+      // Keep auth tester payloads aligned with profile password changes.
+      syncAuthMetadata({
+        password: latestPassword,
+      });
+    }
+
+    if (response.ok && normalizedEndpoint === "/api/auth/logout") {
       elements.tokenInput.value = "";
     }
 
@@ -373,18 +654,24 @@ const attachEventHandlers = (defaultOpenId) => {
     });
   });
 
-  document.querySelectorAll(".tester-toggle").forEach((button) => {
-    button.addEventListener("click", () => {
-      openTester(button.dataset.target, false);
+  document.querySelectorAll("button[data-copy-text]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const copied = await copyTextValue(button.dataset.copyText || "");
+      const label = button.dataset.copyLabel || "Value";
+      setInlineCopyButtonState(
+        button,
+        copied ? `${label} copied` : "Copy failed",
+      );
     });
   });
 
   if (defaultOpenId) {
-    openTester(defaultOpenId);
+    openTester(defaultOpenId, false);
   }
 };
 
 const renderDocs = (docs) => {
+  docsState = docs;
   elements.pageTitle.textContent = docs.title;
   elements.heroTitle.textContent = docs.subtitle;
   elements.heroDescription.textContent = docs.description;
@@ -450,6 +737,10 @@ elements.clearTokenButton.addEventListener("click", () => {
 
 elements.copyTokenButton.addEventListener("click", () => {
   copyTokenToClipboard();
+});
+
+elements.copyBaseUrlButton?.addEventListener("click", () => {
+  copyBaseUrlToClipboard();
 });
 
 loadDocs();

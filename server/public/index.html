@@ -21,6 +21,15 @@
         <div class="badge-row">
           <div class="badge">
             <strong>Base</strong> <code id="base-url"></code>
+            <button
+              type="button"
+              id="copy-base-url"
+              class="badge-copy-button"
+              aria-label="Copy base URL"
+              title="Copy base URL"
+            >
+              Copy
+            </button>
           </div>
           <div class="badge">
             <strong>Security</strong> <code id="auth-badge">Bearer JWT</code>
@@ -36,9 +45,7 @@
         <div class="hero-layout">
           <div class="hero-copy">
             <p class="eyebrow">Reference</p>
-            <h1 id="hero-title">
-              Simple API docs with built-in endpoint testing.
-            </h1>
+            <h1 id="hero-title">Explore and test your API endpoints.</h1>
             <p id="hero-description">
               Endpoints are discovered from your backend automatically and
               rendered below.
