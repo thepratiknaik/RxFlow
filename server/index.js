@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Load environment variables FIRST
 dotenv.config();
@@ -10,6 +12,8 @@ import authRoutes from "./routes/auth.js";
 import User from "./models/User.js";
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Connect to PostgreSQL and start server
 const startServer = async () => {
@@ -28,6 +32,12 @@ const startServer = async () => {
     });
 
     // Routes
+    app.use("/assets", express.static(path.join(__dirname, "..", "client", "src", "assets")));
+
+    app.get("/", (req, res) => {
+      res.sendFile(path.join(__dirname, "public", "index.html"));
+    });
+
     app.use("/api/auth", authRoutes);
 
     // Health check endpoint
