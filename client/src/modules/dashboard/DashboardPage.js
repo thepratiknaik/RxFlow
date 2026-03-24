@@ -1,5 +1,6 @@
 import React from "react";
 import AppShell from "../../components/AppShell.js";
+import Card from "../../components/Card.js";
 import "./DashboardPage.css";
 
 const DashboardPage = () => {
@@ -10,24 +11,24 @@ const DashboardPage = () => {
       {/* Stats Cards */}
       <div className="stats-grid">
         {stats.map((item, index) => (
-          <div className="card stat-card" key={index}>
+          <Card className="stat-card" key={index}>
             <h4>{item}</h4>
             <p>0</p>
-          </div>
+          </Card>
         ))}
       </div>
 
       {/* Lower Grid */}
       <div className="grid-2">
-        <div className="card">
+        <Card>
           <h3>Prescription Queue</h3>
           <p>Queue data will appear here...</p>
-        </div>
+        </Card>
 
-        <div className="card">
+        <Card>
           <h3>Inventory Alerts</h3>
           <p>No alerts right now</p>
-        </div>
+        </Card>
       </div>
     </AppShell>
   );

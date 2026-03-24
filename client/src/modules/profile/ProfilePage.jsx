@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext.js";
 import AppShell from "../../components/AppShell.js";
+import Card from "../../components/Card.js";
 import "./ProfilePage.css";
 
 const ProfilePage = () => {
@@ -74,18 +75,18 @@ const ProfilePage = () => {
             <div className="profile-grid">
 
                 {/* Profile Card */}
-                <div className="card profile-card">
+                <Card className="profile-card">
                     <div className="avatar">{user?.fullname?.charAt(0)}</div>
                     <h3>{user?.fullname}</h3>
                     <p>{user?.email}</p>
                     <span className="role-badge">{user?.role || "Technician"}</span>
-                </div>
+                </Card>
 
                 {/* Profile Forms */}
                 <div className="profile-sections">
 
                     {/* Update Profile */}
-                    <div className="card">
+                    <Card>
                         <h3>Basic Information</h3>
                         <form className="form-grid" onSubmit={handleProfileSubmit}>
                             <input
@@ -104,10 +105,10 @@ const ProfilePage = () => {
                                 {profileLoading ? "Updating..." : "Save Changes"}
                             </button>
                         </form>
-                    </div>
+                    </Card>
 
                     {/* Change Password */}
-                    <div className="card">
+                    <Card>
                         <div className="card-header">
                             <h3>Change Password</h3>
                             <button
@@ -146,7 +147,7 @@ const ProfilePage = () => {
                                 </button>
                             </form>
                         )}
-                    </div>
+                    </Card>
 
                 </div>
             </div>
