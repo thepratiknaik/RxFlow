@@ -194,6 +194,20 @@ class ApiService {
     });
   }
 
+  async updateProfile(data) {
+    return await this.request(API_ENDPOINTS.PROFILE.UPDATE, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changePassword(data) {
+    return await this.request(API_ENDPOINTS.PROFILE.CHANGE_PASSWORD, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+  
   getToken() {
     return localStorage.getItem("token");
   }

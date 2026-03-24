@@ -5,6 +5,7 @@ export const ROUTES = {
   SIGNUP: "/signup",
   DASHBOARD: "/dashboard",
   RESET_PASSWORD: "/reset-password",
+  PROFILE: "/profile",
 };
 
 const readEnv = (key) =>
@@ -93,6 +94,10 @@ export const API_ENDPOINTS = {
       "API_AUTH_RESET_PASSWORD_ENDPOINT",
       "/reset-password",
     ),
+  },
+  PROFILE: {
+    UPDATE: normalizePath("/profile"),
+    CHANGE_PASSWORD: normalizePath("/profile/password"),
   },
 };
 
