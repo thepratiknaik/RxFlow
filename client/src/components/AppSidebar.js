@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { ROUTES } from "../config/routes.js";
 import "./AppSidebar.css";
+import logo from "../assets/logo.png";
 
 const NAV_ITEMS = [
   { label: "Dashboard", to: ROUTES.DASHBOARD },
@@ -13,7 +14,10 @@ const NAV_ITEMS = [
 const AppSidebar = () => {
   return (
     <aside className="app-sidebar">
-      <h2 className="app-sidebar-logo">RxFlow</h2>
+      {/* <h2 className="app-sidebar-logo">RxFlow</h2> */}
+      <div className="brand">
+        <img className="brand-logo" src={logo} alt="RxFlow logo" />
+      </div>
       <nav className="app-sidebar-nav" aria-label="Application">
         {NAV_ITEMS.map((item) => (
           <NavLink

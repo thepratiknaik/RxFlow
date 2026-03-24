@@ -1,13 +1,11 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.js";
-import { ROUTES } from "../../config/routes.js";
 import AppSidebar from "../../components/AppSidebar.js";
+import ProfileDropdown from "../../components/ProfileDropdown.js";
 import "./ProfilePage.css";
 
 const ProfilePage = () => {
-    const { user, logout, updateProfile, changePassword } = useAuth();
-    const navigate = useNavigate();
+    const { user, updateProfile, changePassword } = useAuth();
 
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [profileLoading, setProfileLoading] = useState(false);
@@ -82,7 +80,7 @@ const ProfilePage = () => {
                 <header className="header">
                     <h2>Profile</h2>
                     <div className="header-right">
-                        <ProfileDropdown user={user} logout={logout} navigate={navigate} />
+                        <ProfileDropdown />
                     </div>
                 </header>
 
@@ -169,47 +167,6 @@ const ProfilePage = () => {
                     </div>
                 </div>
             </div>
-        </div>
-    );
-};
-
-const ProfileDropdown = ({ user, logout, navigate }) => {
-    const [open, setOpen] = useState(false);
-    const dropdownRef = React.useRef();
-
-    React.useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false);
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const handleLogout = (e) => {
-        e.stopPropagation();          
-        logout();                      
-        navigate(ROUTES.LOGIN);        
-    };
-
-    const handleViewProfile = (e) => {
-        e.stopPropagation();
-        navigate(ROUTES.PROFILE);
-    };
-
-    return (
-        <div className="profile-wrapper" ref={dropdownRef}>
-            <div className="profile-mini" onClick={() => setOpen(!open)}>
-                {user?.fullname?.charAt(0)}
-            </div>
-            {open && (
-                <div className="dropdown">
-                    <p className="dropdown-name">{user?.fullname}</p>
-                    <p className="dropdown-email">{user?.email}</p>
-                    <div className="dropdown-divider" />
-                    <button onClick={handleViewProfile}>View Profile</button>
-                    <button onClick={handleLogout}>Logout</button>
-                </div>
-            )}
         </div>
     );
 };

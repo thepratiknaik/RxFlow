@@ -1,14 +1,9 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext.js";
-import { ROUTES } from "../../config/routes.js";
 import AppSidebar from "../../components/AppSidebar.js";
+import ProfileDropdown from "../../components/ProfileDropdown.js";
 import "./DashboardPage.css";
 
 const DashboardPage = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
   const stats = ["New Prescriptions", "In Process", "Ready", "Low Stock"];
 
   return (
@@ -22,7 +17,7 @@ const DashboardPage = () => {
         <header className="header">
           <h2>Dashboard</h2>
           <div className="header-right">
-            <ProfileDropdown user={user} logout={logout} navigate={navigate} />
+            <ProfileDropdown />
           </div>
         </header>
 
@@ -54,37 +49,6 @@ const DashboardPage = () => {
 
         </div>
       </div>
-    </div>
-  );
-};
-
-// Profile Dropdown Component
-const ProfileDropdown = ({ user, logout, navigate }) => {
-  const [open, setOpen] = React.useState(false);
-  const dropdownRef = React.useRef();
-
-  React.useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <div className="profile-wrapper" ref={dropdownRef}>
-      <div className="profile-mini" onClick={() => setOpen(!open)}>
-        {user?.fullname?.charAt(0)}
-      </div>
-      {open && (
-        <div className="dropdown">
-          <p className="dropdown-name">{user?.fullname}</p>
-          <p className="dropdown-email">{user?.email}</p>
-          <div className="dropdown-divider" />
-          <button onClick={() => navigate(ROUTES.PROFILE)}>View Profile</button>
-          <button onClick={logout}>Logout</button>
-        </div>
-      )}
     </div>
   );
 };
