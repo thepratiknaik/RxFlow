@@ -295,7 +295,8 @@ pipeline {
 
     failure {
       echo "RxFlow pipeline failed."
-      slackSend(color: "danger", message: "❌ *RxFlow Build Failed!* \nJob: ${env.JOB_NAME} \nBuild: #${env.BUILD_NUMBER} \nURL: ${env.BUILD_URL}")
+      // slackSend(color: "danger", message: "❌ *RxFlow Build Failed!* \nJob: ${env.JOB_NAME} \nBuild: #${env.BUILD_NUMBER} \nURL: ${env.BUILD_URL}")
+      slackSend(color: "good", message: "✅ *RxFlow Build Success!* \nJob: ${env.JOB_NAME} \nBuild: #${env.BUILD_NUMBER} \nURL: ${env.BUILD_URL}")
     }
 
     always {
