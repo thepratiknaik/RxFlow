@@ -1,0 +1,263 @@
+/* ====== ProfilePage.css ====== */
+
+/* Global resets */
+body, input, button {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f6fa;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background-color: #0B1F3B;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 1rem;
+}
+
+.sidebar .logo {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+}
+
+.sidebar nav button {
+  background: none;
+  border: none;
+  color: #fff;
+  text-align: left;
+  padding: 0.65rem 1rem;
+  width: 100%;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sidebar nav button:hover,
+.sidebar nav button.active {
+  background-color: #1a3a5c;
+}
+
+/* Main content */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  background-color: #fff;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.header h2, .header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #0B1F3B;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Profile dropdown */
+.profile-wrapper {
+  position: relative;
+}
+
+.profile-mini {
+  width: 40px;
+  height: 40px;
+  background-color: #00B3A4;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 50px;
+  width: 200px;
+  background: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+  padding: 1rem;
+  z-index: 10;
+}
+
+.dropdown p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e1e4e8;
+  margin: 0.5rem 0;
+}
+
+.dropdown button {
+  width: 100%;
+  background: #00B3A4;
+  color: #fff;
+  border: none;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdown button:hover {
+  background: #009986;
+}
+
+/* Content area */
+.content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 2rem;
+}
+
+/* Profile card */
+.profile-card {
+  background: #fff;
+  padding: 2rem 1rem;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.profile-card .avatar {
+  width: 80px;
+  height: 80px;
+  background-color: #00B3A4;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 1rem auto;
+  font-weight: bold;
+}
+
+.profile-card h3 {
+  margin-bottom: 0.25rem;
+  color: #0B1F3B;
+}
+
+.profile-card p {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.role-badge {
+  display: inline-block;
+  background-color: #e0f7f5;
+  color: #00B3A4;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Profile sections (forms) */
+.profile-sections .card {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin-bottom: 2rem;
+}
+
+.card h3 {
+  margin-bottom: 1rem;
+  color: #0B1F3B;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-grid input {
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  outline: none;
+  transition: border 0.2s;
+}
+
+.form-grid input:focus {
+  border-color: #00B3A4;
+}
+
+.update-btn {
+  background-color: #00B3A4;
+  color: #fff;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.update-btn:hover {
+  background-color: #009986;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.toggle-btn {
+  background: none;
+  border: 1px solid #00B3A4;
+  color: #00B3A4;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+  background-color: #00B3A4;
+  color: #fff;
+}

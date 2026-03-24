@@ -70,6 +70,24 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
+  const updateProfile = async (data) => {
+    const result = await api.updateProfile(data);
+
+    // update state immediately
+    setUser(result.user);
+    setIsAuthenticated(true);
+
+    // persist (important for refresh)
+    localStorage.setItem("user", JSON.stringify(result.user));
+
+    return result;
+  };
+
+  const changePassword = async (data) => {
+    const result = await api.changePassword(data);
+    return result;
+  };
+
   const value = {
     user,
     loading,
@@ -78,6 +96,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     resetPassword,
+    updateProfile,
+    changePassword,
   };
 
   return (
