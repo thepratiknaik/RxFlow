@@ -207,6 +207,64 @@ class ApiService {
       body: JSON.stringify(data),
     });
   }
+
+  async listDrugs({ page = 1, limit = 20, search = "" } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (search.trim()) {
+      params.set("search", search.trim());
+    }
+
+    return await this.request(`${API_ENDPOINTS.DRUGS.LIST}?${params.toString()}`, {
+      method: "GET",
+    });
+  }
+
+  async pullDrugs({ searchTerm = "", limit = 25 } = {}) {
+    return await this.request(API_ENDPOINTS.DRUGS.PULL, {
+      method: "POST",
+      body: JSON.stringify({
+        searchTerm,
+        limit,
+      }),
+    });
+  }
+
+  async listDrugPullJobs({ limit = 10 } = {}) {
+    const params = new URLSearchParams({
+      limit: String(limit),
+    });
+
+    return await this.request(
+      `${API_ENDPOINTS.DRUGS.PULL_JOBS}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async getDrugPullJob(jobId) {
+    return await this.request(API_ENDPOINTS.DRUGS.PULL_JOB(jobId), {
+      method: "GET",
+    });
+  }
+
+  async listDrugPullAudits({ page = 1, limit = 5 } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    return await this.request(
+      `${API_ENDPOINTS.DRUGS.PULL_AUDITS}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+  }
   
   getToken() {
     return localStorage.getItem("token");

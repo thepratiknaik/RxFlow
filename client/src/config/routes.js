@@ -101,6 +101,13 @@ export const API_ENDPOINTS = {
     UPDATE: normalizePath("/profile"),
     CHANGE_PASSWORD: normalizePath("/profile/password"),
   },
+  DRUGS: {
+    LIST: normalizePath("/drugs"),
+    PULL: normalizePath("/drugs/pull"),
+    PULL_JOBS: normalizePath("/drugs/pull-jobs"),
+    PULL_JOB: (jobId) => normalizePath(`/drugs/pull-jobs/${jobId}`),
+    PULL_AUDITS: normalizePath("/drugs/pull-audits"),
+  },
 };
 
 // API Base URL
