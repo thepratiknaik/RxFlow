@@ -190,6 +190,28 @@ const normalizeEndpointPath = (value) => {
   return value.replace(/\/+$/, "") || "/";
 };
 
+/**
+ * Extract path parameters from endpoint path (e.g., :id, :patientId)
+ */
+const extractPathParameters = (path) => {
+  const matches = path.match(/:([a-zA-Z0-9_]+)/g) || [];
+  return matches.map((param) => param.substring(1)); // Remove the leading ':'
+};
+
+/**
+ * Replace path parameters with values from an object
+ */
+const replacePathParameters = (path, params = {}) => {
+  let result = path;
+  extractPathParameters(path).forEach((param) => {
+    const value = params[param];
+    if (value) {
+      result = result.replace(`:${param}`, encodeURIComponent(value));
+    }
+  });
+  return result;
+};
+
 const findEndpoint = (method, path) =>
   docsState?.endpoints?.find(
     (endpoint) =>
@@ -408,19 +430,54 @@ const renderTesterCards = (endpoints) => {
               ${
                 endpoint.requestBody?.fields?.length
                   ? `
-                    <div class="doc-line">
-                      <strong>Request fields:</strong>
-                      ${endpoint.requestBody.fields
-                        .map(
-                          (field) =>
-                            `<code>${escapeHtml(field.name)}</code> (${escapeHtml(field.type)}${field.required ? ", required" : ""})`,
-                        )
-                        .join(", ")}
+                    <div class="fields-section">
+                      <strong style="display: block; margin-bottom: 12px;">Request Fields</strong>
+                      <div class="fields-grid">
+                        ${endpoint.requestBody.fields
+                          .map(
+                            (field) => `
+                              <div class="field-card">
+                                <div class="field-name">${escapeHtml(field.name)}</div>
+                                <div class="field-meta">
+                                  <span class="field-type">${escapeHtml(field.type)}</span>
+                                  ${field.required ? '<span class="field-required">required</span>' : '<span class="field-optional">optional</span>'}
+                                </div>
+                                ${field.example ? `<div class="field-example">Example: <code>${escapeHtml(String(field.example))}</code></div>` : ""}
+                              </div>
+                            `,
+                          )
+                          .join("")}
+                      </div>
                     </div>
                   `
                   : ""
               }
             </div>
+            ${(() => {
+              const pathParams = extractPathParameters(endpoint.path);
+              if (pathParams.length > 0) {
+                return `
+                    <div class="stack">
+                      <div>
+                        <label><strong>Path Parameters</strong></label>
+                        ${pathParams
+                          .map(
+                            (param) =>
+                              `<input 
+                            type="text" 
+                            class="path-param-input" 
+                            data-param="${escapeHtml(param)}" 
+                            placeholder="Enter ${escapeHtml(param)}"
+                            aria-label="Path parameter: ${escapeHtml(param)}"
+                          />`,
+                          )
+                          .join("")}
+                      </div>
+                    </div>
+                  `;
+              }
+              return "";
+            })()}
             ${
               endpoint.hasBody
                 ? `
@@ -501,7 +558,23 @@ const sendRequest = async ({
   requiresAuth,
 }) => {
   const container = button.closest(".tester");
-  const normalizedEndpoint = normalizeEndpointPath(endpoint);
+  let processedEndpoint = endpoint;
+
+  // Collect path parameter values from input fields
+  const pathParams = {};
+  const paramInputs = container.querySelectorAll(".path-param-input");
+  paramInputs.forEach((input) => {
+    const paramName = input.dataset.param;
+    const paramValue = input.value.trim();
+    if (paramName && paramValue) {
+      pathParams[paramName] = paramValue;
+    }
+  });
+
+  // Replace path parameters in the endpoint
+  processedEndpoint = replacePathParameters(endpoint, pathParams);
+
+  const normalizedEndpoint = normalizeEndpointPath(processedEndpoint);
   const headers = {};
   const options = { method, headers };
   let requestPayload = null;
@@ -542,7 +615,7 @@ const sendRequest = async ({
   }
 
   try {
-    const response = await fetch(`${baseUrl}${endpoint}`, options);
+    const response = await fetch(`${baseUrl}${processedEndpoint}`, options);
     const text = await response.text();
     let payload = text;
 

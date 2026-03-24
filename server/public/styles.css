@@ -750,6 +750,27 @@ textarea {
   font-family: Consolas, "Courier New", monospace;
 }
 
+.tester .path-param-input {
+  margin-bottom: 12px;
+  border-radius: 12px;
+  border-color: #a8bacc;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: #0f172a;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.tester .path-param-input:focus {
+  outline: none;
+  border-color: #0f6cbd;
+  box-shadow: 0 0 0 3px rgba(15, 108, 189, 0.1);
+  background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);
+}
+
+.tester .path-param-input::placeholder {
+  color: #7b8c9f;
+}
+
 .tester .actions button {
   min-width: 132px;
   box-shadow: 0 6px 16px rgba(15, 108, 189, 0.22);
@@ -791,6 +812,105 @@ textarea {
   font-weight: 600;
 }
 
+/* Request Fields Section Styling */
+.fields-section {
+  margin-top: 16px;
+}
+
+.fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.field-card {
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbfe 0%, #f2f7fb 100%);
+  border: 1px solid #cfe3f0;
+  transition: all 200ms ease;
+}
+
+.field-card:hover {
+  border-color: #a9c8e5;
+  background: linear-gradient(135deg, #f4f9ff 0%, #edf5fc 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 108, 189, 0.08);
+}
+
+.field-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #0f2a4a;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.field-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.field-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.field-required {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.field-optional {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.field-example {
+  font-size: 0.85rem;
+  color: #4f6d8d;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5ecf5;
+}
+
+.field-example code {
+  background: #0f172a;
+  color: #e0f2fe;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
 @media (max-width: 980px) {
   .hero-layout,
   .content,
@@ -825,6 +945,10 @@ textarea {
   .shell {
     width: calc(100% - 16px);
     margin: 12px auto 24px;
+  }
+
+  .fields-grid {
+    grid-template-columns: 1fr;
   }
 
   .topbar,
