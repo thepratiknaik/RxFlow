@@ -290,10 +290,7 @@ const PatientsPage = () => {
   const [saveLoading, setSaveLoading] = React.useState(false);
   const [saveError, setSaveError] = React.useState("");
   const [saveSuccess, setSaveSuccess] = React.useState("");
-
-  const [audits, setAudits] = React.useState([]);
-  const [auditsLoading, setAuditsLoading] = React.useState(false);
-  const [auditsError, setAuditsError] = React.useState("");
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
 
   const applyPatientToForm = React.useCallback((patient) => {
     setFormData({
@@ -373,30 +370,6 @@ const PatientsPage = () => {
     }
   }, [applyPatientToForm]);
 
-  const fetchAudits = React.useCallback(async (patientId) => {
-    if (!canManagePatients || !patientId) {
-      setAudits([]);
-      setAuditsError("");
-      return;
-    }
-
-    setAuditsLoading(true);
-    setAuditsError("");
-
-    try {
-      const response = await api.getPatientAudits(patientId, {
-        page: 1,
-        limit: 10,
-      });
-
-      setAudits(response?.data || []);
-    } catch (err) {
-      setAuditsError(err.message || "Failed to load patient audits.");
-    } finally {
-      setAuditsLoading(false);
-    }
-  }, [canManagePatients]);
-
   React.useEffect(() => {
     fetchPatients(patientsPagination.page, searchQuery);
   }, [fetchPatients, patientsPagination.page, searchQuery]);
@@ -418,8 +391,7 @@ const PatientsPage = () => {
 
   React.useEffect(() => {
     fetchPatientDetails(selectedPatientId);
-    fetchAudits(selectedPatientId);
-  }, [fetchAudits, fetchPatientDetails, selectedPatientId]);
+  }, [fetchPatientDetails, selectedPatientId]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -505,7 +477,6 @@ const PatientsPage = () => {
         setSelectedPatient(savedPatient);
         setFormMode("edit");
         applyPatientToForm(savedPatient);
-        fetchAudits(savedPatient.id);
         setCreateModalOpen(false);
       }
 
@@ -515,6 +486,50 @@ const PatientsPage = () => {
       setSaveError(err.message || "Failed to save patient.");
     } finally {
       setSaveLoading(false);
+    }
+  };
+
+  const handleDeletePatient = async () => {
+    if (!selectedPatientId || !selectedPatient) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete patient ${selectedPatient.firstName} ${selectedPatient.lastName}? This cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    setSaveError("");
+    setSaveSuccess("");
+
+    try {
+      const deletedId = selectedPatientId;
+      await api.deletePatient(deletedId);
+
+      setSaveSuccess("Patient deleted successfully.");
+      setSelectedPatient(null);
+      setSelectedPatientId("");
+      setDetailsError("");
+      applyPatientToForm(EMPTY_FORM);
+
+      const nextPage =
+        patients.length === 1 && patientsPagination.page > 1
+          ? patientsPagination.page - 1
+          : patientsPagination.page;
+
+      await fetchPatients(nextPage, searchQuery);
+      setPatientsPagination((current) => ({
+        ...current,
+        page: nextPage,
+      }));
+    } catch (err) {
+      setSaveError(err.message || "Failed to delete patient.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -661,9 +676,17 @@ const PatientsPage = () => {
 
                   <div className="patients-actions">
                     <button
+                      type="button"
+                      className="patients-danger-btn"
+                      onClick={handleDeletePatient}
+                      disabled={deleteLoading || saveLoading}
+                    >
+                      {deleteLoading ? "Deleting..." : "Delete Patient"}
+                    </button>
+                    <button
                       type="submit"
                       className="patients-primary-btn"
-                      disabled={saveLoading}
+                      disabled={saveLoading || deleteLoading}
                     >
                       {saveLoading
                         ? "Saving..."
@@ -718,40 +741,6 @@ const PatientsPage = () => {
               )}
             </Card>
 
-            <Card className="patients-panel">
-              <h3>Patient Audits</h3>
-              {!canManagePatients ? (
-                <EmptyState
-                  title="Restricted audit access"
-                  description="Only pharmacists and admins can view patient audit history."
-                />
-              ) : auditsError ? (
-                <div className="patients-message error">{auditsError}</div>
-              ) : auditsLoading ? (
-                <div className="patients-message">Loading audits...</div>
-              ) : audits.length === 0 ? (
-                <EmptyState
-                  title="No audits yet"
-                  description="Create or update a patient to start building an audit trail."
-                />
-              ) : (
-                <div className="patients-audit-list">
-                  {audits.map((audit) => (
-                    <div key={audit.id} className="patients-audit-item">
-                      <strong>{audit.fieldName}</strong>
-                      <p>
-                        {audit.oldValue || "empty"} | {audit.newValue || "empty"}
-                      </p>
-                      <span>
-                        {audit.createdat
-                          ? new Date(audit.createdat).toLocaleString()
-                          : "Unknown time"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
           </div>
         </div>
       </div>

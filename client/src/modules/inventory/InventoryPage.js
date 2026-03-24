@@ -39,10 +39,6 @@ const InventoryPage = () => {
   const [jobsLoading, setJobsLoading] = React.useState(false);
   const [jobsError, setJobsError] = React.useState("");
 
-  const [audits, setAudits] = React.useState([]);
-  const [auditsLoading, setAuditsLoading] = React.useState(false);
-  const [auditsError, setAuditsError] = React.useState("");
-
   const fetchDrugs = React.useCallback(async (page, search) => {
     setLoading(true);
     setError("");
@@ -77,25 +73,16 @@ const InventoryPage = () => {
 
     setJobsLoading(true);
     setJobsError("");
-    setAuditsLoading(true);
-    setAuditsError("");
 
     try {
-      const [jobsResponse, auditsResponse] = await Promise.all([
-        api.listDrugPullJobs({ limit: 5 }),
-        api.listDrugPullAudits({ page: 1, limit: 5 }),
-      ]);
+      const jobsResponse = await api.listDrugPullJobs({ limit: 5 });
 
       setJobs(jobsResponse?.data || []);
       setJobsSummary(jobsResponse?.summary || { total: 0, byState: {} });
-      setAudits(auditsResponse?.data || []);
     } catch (err) {
-      const message = err.message || "Failed to load pull activity.";
-      setJobsError(message);
-      setAuditsError(message);
+      setJobsError(err.message || "Failed to load pull activity.");
     } finally {
       setJobsLoading(false);
-      setAuditsLoading(false);
     }
   }, [canPullDrugs]);
 
@@ -372,33 +359,6 @@ const InventoryPage = () => {
                   )}
                 </Card>
 
-                <Card className="inventory-panel">
-                  <h3>Recent Pull Audits</h3>
-
-                  {auditsError ? (
-                    <div className="inventory-message error">{auditsError}</div>
-                  ) : auditsLoading ? (
-                    <div className="inventory-message">Loading audits...</div>
-                  ) : audits.length === 0 ? (
-                    <div className="inventory-message">No pull audits found.</div>
-                  ) : (
-                    <div className="inventory-list">
-                      {audits.map((audit) => (
-                        <div key={audit.id} className="inventory-list-item audit-item">
-                          <div>
-                            <strong>{audit.searchterm || "Full sync"}</strong>
-                            <p>
-                              Requested {audit.requestedlimit} items
-                            </p>
-                          </div>
-                          <span className={`status-badge status-${audit.status}`}>
-                            {audit.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
               </>
             ) : (
               <Card className="inventory-panel">

@@ -4,6 +4,7 @@ import {
   getPatient,
   createPatient,
   updatePatient,
+  deletePatient,
   getPatientAudits,
 } from "../controllers/patientController.js";
 import { authorize, verifyToken } from "../middleware/auth.js";
@@ -35,6 +36,14 @@ router.put(
   verifyToken,
   authorize(["pharmacist", "admin"]),
   updatePatient,
+);
+
+// Delete patient
+router.delete(
+  "/:id",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  deletePatient,
 );
 
 // Get patient audit logs

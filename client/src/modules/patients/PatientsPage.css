@@ -64,6 +64,7 @@
 .patients-search button,
 .patients-primary-btn,
 .patients-secondary-btn,
+.patients-danger-btn,
 .patients-pagination button {
   border: none;
   border-radius: 10px;
@@ -84,7 +85,13 @@
   color: var(--text-primary);
 }
 
+.patients-danger-btn {
+  background: #fee4e2;
+  color: #b42318;
+}
+
 .patients-primary-btn:disabled,
+.patients-danger-btn:disabled,
 .patients-search button:disabled,
 .patients-pagination button:disabled {
   opacity: 0.6;
@@ -202,30 +209,6 @@
 .patients-detail-grid strong {
   color: var(--text-primary);
   font-size: 0.95rem;
-}
-
-.patients-audit-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.patients-audit-item {
-  padding: 0.95rem 1rem;
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  background: #f9fbfd;
-}
-
-.patients-audit-item strong {
-  color: var(--text-primary);
-}
-
-.patients-audit-item p,
-.patients-audit-item span {
-  margin: 0.3rem 0 0;
-  color: var(--text-secondary);
-  font-size: 0.88rem;
 }
 
 .patients-modal-backdrop {

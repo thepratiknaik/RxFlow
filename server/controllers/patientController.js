@@ -283,6 +283,36 @@ export const updatePatient = async (req, res) => {
 };
 
 /**
+ * Delete a patient
+ */
+export const deletePatient = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const patient = await Patient.findByPk(id);
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found.",
+      });
+    }
+
+    await patient.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: "Patient deleted successfully.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete patient.",
+    });
+  }
+};
+
+/**
  * Get patient audit logs
  */
 export const getPatientAudits = async (req, res) => {

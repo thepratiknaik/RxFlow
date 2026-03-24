@@ -107,12 +107,10 @@ export const API_ENDPOINTS = {
     PULL: normalizePath("/drugs/pull"),
     PULL_JOBS: normalizePath("/drugs/pull-jobs"),
     PULL_JOB: (jobId) => normalizePath(`/drugs/pull-jobs/${jobId}`),
-    PULL_AUDITS: normalizePath("/drugs/pull-audits"),
   },
   PATIENTS: {
     LIST: normalizePath("/patients"),
     DETAIL: (id) => normalizePath(`/patients/${id}`),
-    AUDITS: (patientId) => normalizePath(`/patients/${patientId}/audits`),
   },
 };
 

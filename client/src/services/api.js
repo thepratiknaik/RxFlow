@@ -252,20 +252,6 @@ class ApiService {
     });
   }
 
-  async listDrugPullAudits({ page = 1, limit = 5 } = {}) {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
-    });
-
-    return await this.request(
-      `${API_ENDPOINTS.DRUGS.PULL_AUDITS}?${params.toString()}`,
-      {
-        method: "GET",
-      },
-    );
-  }
-
   async searchPatients({ q = "", page = 1, limit = 10 } = {}) {
     const params = new URLSearchParams({
       page: String(page),
@@ -304,18 +290,10 @@ class ApiService {
     });
   }
 
-  async getPatientAudits(patientId, { page = 1, limit = 10 } = {}) {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
+  async deletePatient(id) {
+    return await this.request(API_ENDPOINTS.PATIENTS.DETAIL(id), {
+      method: "DELETE",
     });
-
-    return await this.request(
-      `${API_ENDPOINTS.PATIENTS.AUDITS(patientId)}?${params.toString()}`,
-      {
-        method: "GET",
-      },
-    );
   }
   
   getToken() {

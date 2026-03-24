@@ -90,10 +90,10 @@ const WebsitePage = () => {
             </div>
             <div className="step-card" data-animate>
               <div className="step-number">3</div>
-              <h3>Patient Pickup &amp; Audit</h3>
+              <h3>Patient Pickup &amp; Safety</h3>
               <p>
                 Enable safe patient pickups with role-based access controls.
-                Maintain complete audit logs for accountability and compliance.
+                Keep every handoff consistent and secure across the pharmacy.
               </p>
             </div>
           </div>
@@ -146,10 +146,10 @@ const WebsitePage = () => {
             </div>
             <div className="feature-card" data-animate>
               <div className="feature-icon">✅</div>
-              <h3>Complete Audit Trails</h3>
+              <h3>Operational Transparency</h3>
               <p>
-                Every action logged for full accountability. Meet regulatory
-                requirements with comprehensive audit logs.
+                Keep teams aligned with better visibility into daily pharmacy
+                operations and workflows.
               </p>
             </div>
           </div>
@@ -193,9 +193,8 @@ const WebsitePage = () => {
             <div className="service-box" data-animate>
               <h3>✅ Compliance &amp; Accountability</h3>
               <p>
-                Automatic audit logs capture every action. Meet regulatory
-                requirements and demonstrate accountability to inspectors and
-                auditors.
+                Consistent workflow visibility helps teams stay aligned and
+                support compliance across day-to-day operations.
               </p>
             </div>
             <div className="service-box" data-animate>
@@ -267,10 +266,10 @@ const WebsitePage = () => {
             </p>
           </div>
           <div className="security-item" data-animate>
-            <h4>📋 Complete Audit Logs</h4>
+            <h4>📋 Workflow Visibility</h4>
             <p>
-              Every transaction logged automatically. Full accountability and
-              regulatory compliance for your pharmacy.
+              Clear operational visibility helps your team stay coordinated and
+              reduce handoff errors.
             </p>
           </div>
           <div className="security-item" data-animate>
@@ -304,9 +303,8 @@ const WebsitePage = () => {
             </div>
             <div className="testimonial-card">
               <p className="testimonial-text">
-                The compliance and audit logs give us peace of mind. Our
-                regulators love the transparency, and our staff appreciates the
-                simplicity.
+                The workflow visibility gives us peace of mind. Our team stays
+                aligned, and daily operations are much simpler to manage.
               </p>
               <div className="testimonial-author">
                 <div className="author-avatar">MD</div>
