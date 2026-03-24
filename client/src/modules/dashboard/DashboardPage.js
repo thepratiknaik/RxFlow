@@ -1,6 +1,7 @@
 import React from "react";
 import AppShell from "../../components/AppShell.js";
 import Card from "../../components/Card.js";
+import EmptyState from "../../components/EmptyState.js";
 import "./DashboardPage.css";
 
 const DashboardPage = () => {
@@ -21,13 +22,17 @@ const DashboardPage = () => {
       {/* Lower Grid */}
       <div className="grid-2">
         <Card>
-          <h3>Prescription Queue</h3>
-          <p>Queue data will appear here...</p>
+          <EmptyState
+            title="Prescription Queue"
+            description="Queue data will appear here..."
+          />
         </Card>
 
         <Card>
-          <h3>Inventory Alerts</h3>
-          <p>No alerts right now</p>
+          <EmptyState
+            title="Inventory Alerts"
+            description="No alerts right now"
+          />
         </Card>
       </div>
     </AppShell>
