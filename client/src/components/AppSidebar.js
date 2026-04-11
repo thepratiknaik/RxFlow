@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { label: "Patients", to: ROUTES.PATIENTS },
   { label: "Prescriptions", to: ROUTES.PRESCRIPTIONS },
   { label: "Inventory", to: ROUTES.INVENTORY },
+  { label: "Prescribers", to: ROUTES.PRESCRIBER},
 ];
 
 const AppSidebar = () => {

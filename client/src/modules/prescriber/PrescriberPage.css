@@ -1,0 +1,135 @@
+.prescribers-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.prescribers-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(0, 1.2fr);
+  gap: 1.5rem;
+}
+
+.prescribers-toolbar,
+.prescribers-section-header,
+.prescribers-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.prescribers-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.prescribers-search input,
+.prescribers-form input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+}
+
+.prescribers-primary-btn {
+  background: linear-gradient(135deg, var(--teal), var(--accent));
+  color: white;
+  border: none;
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.prescribers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.prescribers-list-item {
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f9fbfd;
+  border: 1px solid var(--border-light);
+  text-align: left;
+  cursor: pointer;
+}
+
+.prescribers-list-item.active {
+  border-color: var(--teal);
+  background: #f4fffd;
+}
+
+.prescribers-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.prescribers-detail-grid span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.prescribers-chip {
+  background: rgba(0, 179, 164, 0.1);
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.prescribers-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.prescriber-modal-close {
+  border: none;
+  background: #eef2f7;
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.prescribers-modal {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  width: 500px;
+}
+
+.prescribers-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.prescribers-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.prescribers-form-span-2 {
+  grid-column: span 2;
+}
+
+.prescribers-detail-grid span {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.prescribers-detail-grid strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}

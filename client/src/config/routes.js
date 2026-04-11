@@ -9,6 +9,7 @@ export const ROUTES = {
   PATIENTS: "/patients",
   PRESCRIPTIONS: "/prescriptions",
   INVENTORY: "/inventory",
+  PRESCRIBER: "/prescriber",
 };
 
 const readEnv = (key) =>
