@@ -34,3 +34,14 @@ export const authorize = (roles) => {
     next();
   };
 };
+
+/** Only the pharmacist role may proceed (not admin or technician). */
+export const authorizePharmacistOnly = (req, res, next) => {
+  if (req.user?.role !== "pharmacist") {
+    return res.status(403).json({
+      success: false,
+      message: "Only pharmacists may perform this action.",
+    });
+  }
+  next();
+};

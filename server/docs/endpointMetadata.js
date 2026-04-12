@@ -404,6 +404,206 @@ const endpointMetadata = {
       "Returns paginated audit history of all operations performed on a patient record including creates, updates, reads, and searches.",
     authRequired: true,
   },
+  "GET /api/prescriptions": {
+    name: "List Prescriptions",
+    description:
+      "Returns paginated prescriptions. Filter with ?status= (e.g. new) and optional ?source=fhir|manual. Sorted by received time (created) descending by default.",
+    authRequired: true,
+  },
+  "POST /api/prescriptions/fhir/sync": {
+    name: "Sync FHIR MedicationRequest",
+    description:
+      "Fetches MedicationRequest resources from the configured FHIR server (default HAPI public R4), maps them to internal prescriptions, and upserts by FHIR server URL and resource id.",
+    authRequired: true,
+    requestBody: {
+      label: "FHIR sync (optional)",
+      fields: [
+        {
+          name: "maxCount",
+          type: "number",
+          required: false,
+          example: 25,
+        },
+        {
+          name: "fhirBaseUrl",
+          type: "string",
+          required: false,
+          example: "https://hapi.fhir.org/baseR4",
+        },
+      ],
+    },
+  },
+  "POST /api/prescriptions": {
+    name: "Create Manual Prescription",
+    description:
+      "Creates a prescription from manual entry and places it in the New queue.",
+    authRequired: true,
+    requestBody: {
+      label: "Manual prescription",
+      fields: [
+        {
+          name: "patientId",
+          type: "string (UUID)",
+          required: false,
+          example: "",
+        },
+        {
+          name: "medicationDisplay",
+          type: "string",
+          required: true,
+          example: "Amoxicillin 500 mg capsule",
+        },
+        {
+          name: "sig",
+          type: "string",
+          required: false,
+          example: "Take one capsule by mouth three times daily",
+        },
+        {
+          name: "quantityValue",
+          type: "number",
+          required: false,
+          example: 30,
+        },
+        {
+          name: "quantityUnit",
+          type: "string",
+          required: false,
+          example: "capsule",
+        },
+        {
+          name: "refillsAllowed",
+          type: "number",
+          required: false,
+          example: 0,
+        },
+        {
+          name: "authoredOn",
+          type: "string (date)",
+          required: false,
+          example: "2026-04-01",
+        },
+        {
+          name: "prescriberDisplay",
+          type: "string",
+          required: false,
+          example: "Dr. Smith",
+        },
+        {
+          name: "notes",
+          type: "string",
+          required: false,
+          example: "",
+        },
+        {
+          name: "insuranceProviderName",
+          type: "string",
+          required: false,
+          example: "HealthPlan PPO",
+        },
+        {
+          name: "insurancePolicyNumber",
+          type: "string",
+          required: false,
+          example: "XYZ123456789",
+        },
+        {
+          name: "insuranceGroupId",
+          type: "string",
+          required: false,
+          example: "GRP0099",
+        },
+      ],
+    },
+  },
+  "POST /api/prescriptions/:id/approve-et-in": {
+    name: "Approve ET-In (Pharmacist only)",
+    description:
+      "Records electronic transmission / intake approval for a New prescription. Restricted to the pharmacist role (not admin or technician).",
+    authRequired: true,
+  },
+  "PATCH /api/prescriptions/:id/insurance": {
+    name: "Update Prescription Insurance",
+    description:
+      "Updates payer insurance fields (provider name, policy number, group id) on a prescription.",
+    authRequired: true,
+    requestBody: {
+      label: "Insurance fields (any)",
+      fields: [
+        {
+          name: "insuranceProviderName",
+          type: "string",
+          required: false,
+          example: "HealthPlan PPO",
+        },
+        {
+          name: "insurancePolicyNumber",
+          type: "string",
+          required: false,
+          example: "XYZ123456789",
+        },
+        {
+          name: "insuranceGroupId",
+          type: "string",
+          required: false,
+          example: "GRP0099",
+        },
+      ],
+    },
+  },
+  "GET /api/prescriptions/:id": {
+    name: "Get Prescription",
+    description:
+      "Returns a single prescription with optional linked patient record.",
+    authRequired: true,
+  },
+  "GET /api/inventory/lots": {
+    name: "List Inventory Lots",
+    description:
+      "Returns stock rows with drug name, quantity on hand, lot number, expiry, and whether quantity is below the configured minimum (threshold). Optional ?belowThreshold=true filters to low-stock rows only.",
+    authRequired: true,
+  },
+  "POST /api/inventory/lots": {
+    name: "Create Inventory Lot",
+    description:
+      "Creates or records a stock lot for a catalog drug (quantity, lot number, expiry, minimum level).",
+    authRequired: true,
+    requestBody: {
+      label: "Inventory lot",
+      fields: [
+        {
+          name: "drugId",
+          type: "string (UUID)",
+          required: true,
+          example: "",
+        },
+        {
+          name: "lotNumber",
+          type: "string",
+          required: true,
+          example: "LOT-2026-A1",
+        },
+        {
+          name: "expiryDate",
+          type: "string (date)",
+          required: true,
+          example: "2027-06-30",
+        },
+        {
+          name: "quantityOnHand",
+          type: "number",
+          required: false,
+          example: 120,
+        },
+        {
+          name: "minimumLevel",
+          type: "number",
+          required: false,
+          example: 30,
+        },
+      ],
+    },
+  },
 };
 
 const buildExampleBody = (requestBody) => {

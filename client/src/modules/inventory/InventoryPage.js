@@ -12,6 +12,25 @@ const InventoryPage = () => {
   const canPullDrugs = ["admin", "pharmacist"].includes(
     String(user?.role || "").toLowerCase(),
   );
+  const canManageLots = canPullDrugs;
+
+  const [lots, setLots] = React.useState([]);
+  const [lotsSummary, setLotsSummary] = React.useState({
+    belowThresholdTotal: 0,
+    totalLotRows: 0,
+  });
+  const [lotsLoading, setLotsLoading] = React.useState(true);
+  const [lotsError, setLotsError] = React.useState("");
+  const [lotsFilterLow, setLotsFilterLow] = React.useState(false);
+  const [lotForm, setLotForm] = React.useState({
+    drugId: "",
+    lotNumber: "",
+    expiryDate: "",
+    quantityOnHand: "0",
+    minimumLevel: "10",
+  });
+  const [lotSaving, setLotSaving] = React.useState(false);
+  const [lotMessage, setLotMessage] = React.useState({ tone: "", text: "" });
 
   const [drugs, setDrugs] = React.useState([]);
   const [pagination, setPagination] = React.useState({
@@ -38,6 +57,33 @@ const InventoryPage = () => {
   const [jobsSummary, setJobsSummary] = React.useState({ total: 0, byState: {} });
   const [jobsLoading, setJobsLoading] = React.useState(false);
   const [jobsError, setJobsError] = React.useState("");
+
+  const fetchLots = React.useCallback(async () => {
+    setLotsLoading(true);
+    setLotsError("");
+
+    try {
+      const response = await api.listInventoryLots({
+        page: 1,
+        limit: 200,
+        belowThreshold: lotsFilterLow,
+      });
+
+      setLots(response?.data || []);
+      setLotsSummary(
+        response?.summary || { belowThresholdTotal: 0, totalLotRows: 0 },
+      );
+    } catch (err) {
+      setLotsError(err.message || "Failed to load stock lots.");
+      setLots([]);
+    } finally {
+      setLotsLoading(false);
+    }
+  }, [lotsFilterLow]);
+
+  React.useEffect(() => {
+    fetchLots();
+  }, [fetchLots]);
 
   const fetchDrugs = React.useCallback(async (page, search) => {
     setLoading(true);
@@ -132,6 +178,43 @@ const InventoryPage = () => {
     setSearchQuery(nextQuery);
   };
 
+  const handleLotFormChange = (e) => {
+    const { name, value } = e.target;
+    setLotForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleLotSubmit = async (e) => {
+    e.preventDefault();
+    setLotMessage({ tone: "", text: "" });
+    setLotSaving(true);
+
+    try {
+      await api.createInventoryLot({
+        drugId: lotForm.drugId.trim(),
+        lotNumber: lotForm.lotNumber.trim(),
+        expiryDate: lotForm.expiryDate,
+        quantityOnHand: Number(lotForm.quantityOnHand) || 0,
+        minimumLevel: Number(lotForm.minimumLevel) || 10,
+      });
+      setLotMessage({ tone: "success", text: "Stock lot saved." });
+      setLotForm({
+        drugId: "",
+        lotNumber: "",
+        expiryDate: "",
+        quantityOnHand: "0",
+        minimumLevel: "10",
+      });
+      await fetchLots();
+    } catch (err) {
+      setLotMessage({
+        tone: "error",
+        text: err.message || "Could not save stock lot.",
+      });
+    } finally {
+      setLotSaving(false);
+    }
+  };
+
   const handlePullSubmit = async (e) => {
     e.preventDefault();
     setPullLoading(true);
@@ -160,6 +243,169 @@ const InventoryPage = () => {
   return (
     <AppShell title="Inventory">
       <div className="inventory-page">
+        <Card className="inventory-panel inventory-stock-dashboard">
+          <div className="inventory-toolbar">
+            <div>
+              <h3>Stock by lot</h3>
+              <p className="inventory-subtitle">
+                On-hand quantity, lot number, and expiry. Rows highlight when{" "}
+                <strong>quantity &lt; minimum level</strong> (backend threshold
+                rule).
+              </p>
+            </div>
+            <div className="inventory-summary">
+              <span>{lotsSummary.totalLotRows ?? 0} lot rows</span>
+              <span className="inventory-alert-pill">
+                {lotsSummary.belowThresholdTotal ?? 0} below minimum
+              </span>
+            </div>
+          </div>
+
+          <div className="inventory-lots-toolbar">
+            <label className="inventory-lots-toggle">
+              <input
+                type="checkbox"
+                checked={lotsFilterLow}
+                onChange={(e) => setLotsFilterLow(e.target.checked)}
+              />
+              Show only below minimum
+            </label>
+          </div>
+
+          {lotsError ? (
+            <div className="inventory-message error">{lotsError}</div>
+          ) : null}
+
+          {lotsLoading ? (
+            <div className="inventory-message">Loading stock lots…</div>
+          ) : lots.length === 0 ? (
+            <div className="inventory-empty">
+              <EmptyState
+                title="No stock lots"
+                description="Add lots against drugs from your catalog, or sync drugs first then record receiving."
+              />
+            </div>
+          ) : (
+            <div className="inventory-table-wrap inventory-lots-table-wrap">
+              <table className="inventory-table inventory-lots-table">
+                <thead>
+                  <tr>
+                    <th>Drug</th>
+                    <th>Quantity</th>
+                    <th>Minimum</th>
+                    <th>Lot #</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lots.map((lot) => (
+                    <tr
+                      key={lot.id}
+                      className={
+                        lot.belowThreshold ? "inventory-row-low" : undefined
+                      }
+                    >
+                      <td>
+                        <div className="inventory-drug-name">
+                          {lot.drugDisplayName || "—"}
+                        </div>
+                        <div className="inventory-drug-ndc">
+                          {lot.drug?.productndc || ""}
+                        </div>
+                      </td>
+                      <td>{lot.quantityOnHand}</td>
+                      <td>{lot.minimumLevel}</td>
+                      <td className="inventory-mono">{lot.lotNumber}</td>
+                      <td>{lot.expiryDate || "—"}</td>
+                      <td>
+                        {lot.belowThreshold ? (
+                          <span className="inventory-status-badge inventory-status-low">
+                            Low stock
+                          </span>
+                        ) : (
+                          <span className="inventory-status-badge inventory-status-ok">
+                            OK
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {canManageLots ? (
+            <div className="inventory-lot-form-wrap">
+              <h4 className="inventory-lot-form-title">Add / adjust lot</h4>
+              <form className="inventory-lot-form" onSubmit={handleLotSubmit}>
+                <label>
+                  Drug ID (UUID)
+                  <input
+                    name="drugId"
+                    value={lotForm.drugId}
+                    onChange={handleLotFormChange}
+                    placeholder="From drug catalog"
+                    required
+                  />
+                </label>
+                <label>
+                  Lot number
+                  <input
+                    name="lotNumber"
+                    value={lotForm.lotNumber}
+                    onChange={handleLotFormChange}
+                    required
+                  />
+                </label>
+                <label>
+                  Expiry
+                  <input
+                    name="expiryDate"
+                    type="date"
+                    value={lotForm.expiryDate}
+                    onChange={handleLotFormChange}
+                    required
+                  />
+                </label>
+                <label>
+                  Quantity on hand
+                  <input
+                    name="quantityOnHand"
+                    type="number"
+                    min="0"
+                    value={lotForm.quantityOnHand}
+                    onChange={handleLotFormChange}
+                  />
+                </label>
+                <label>
+                  Minimum level
+                  <input
+                    name="minimumLevel"
+                    type="number"
+                    min="0"
+                    value={lotForm.minimumLevel}
+                    onChange={handleLotFormChange}
+                  />
+                </label>
+                <button type="submit" disabled={lotSaving}>
+                  {lotSaving ? "Saving…" : "Save lot"}
+                </button>
+              </form>
+              {lotMessage.text ? (
+                <div
+                  className={`inventory-message ${
+                    lotMessage.tone === "error" ? "error" : "success"
+                  }`}
+                >
+                  {lotMessage.text}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </Card>
+
         <div className="inventory-grid">
           <Card className="inventory-panel inventory-panel-wide">
             <div className="inventory-toolbar">

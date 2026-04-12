@@ -257,6 +257,124 @@
   color: #b42318;
 }
 
+.inventory-stock-dashboard {
+  min-width: 0;
+}
+
+.inventory-alert-pill {
+  background: rgba(180, 35, 24, 0.1);
+  color: #b42318;
+}
+
+.inventory-lots-toolbar {
+  margin-bottom: 0.75rem;
+}
+
+.inventory-lots-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.inventory-lots-table-wrap {
+  margin-top: 0.5rem;
+}
+
+.inventory-lots-table {
+  min-width: 880px;
+}
+
+.inventory-row-low {
+  background: rgba(180, 35, 24, 0.04);
+}
+
+.inventory-drug-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inventory-drug-ndc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.inventory-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.inventory-status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.inventory-status-low {
+  background: rgba(180, 35, 24, 0.12);
+  color: #b42318;
+}
+
+.inventory-status-ok {
+  background: rgba(2, 122, 72, 0.12);
+  color: #027a48;
+}
+
+.inventory-lot-form-wrap {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.inventory-lot-form-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.inventory-lot-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.inventory-lot-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inventory-lot-form input {
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  font-size: 0.9rem;
+}
+
+.inventory-lot-form button {
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--teal), var(--accent));
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  height: fit-content;
+}
+
+.inventory-lot-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 1100px) {
   .inventory-grid {
     grid-template-columns: 1fr;
