@@ -261,6 +261,40 @@ const PatientFormFields = ({ formData, onChange }) => {
   );
 };
 
+// Insurance tab
+const InsuranceSection = ({ selectedPatient }) => {
+  const insurance = {
+    insurance_id: "INS123",
+    patient_id: selectedPatient?.id || "P001",
+    provider_name: "Aetna",
+    member_id: "M123456789",
+    bin_number: "012345",
+    pcn_number: "PCN7890",
+  };
+
+  return (
+    <div className="patients-form">
+      <div className="patients-form-grid">
+        <label>
+          Provider Name
+          <input value={insurance.provider_name} readOnly />
+        </label>
+        <label>
+          Member ID
+          <input value={insurance.member_id} readOnly />
+        </label>
+        <label>
+          BIN Number
+          <input value={insurance.bin_number} readOnly />
+        </label>
+        <label>
+          PCN Number
+          <input value={insurance.pcn_number} readOnly />
+        </label>
+      </div>
+    </div>
+  );
+};
 const PatientsPage = () => {
   const { user } = useAuth();
   const canManagePatients = ["admin", "pharmacist"].includes(
@@ -291,6 +325,8 @@ const PatientsPage = () => {
   const [saveError, setSaveError] = React.useState("");
   const [saveSuccess, setSaveSuccess] = React.useState("");
   const [deleteLoading, setDeleteLoading] = React.useState(false);
+
+  const [activeTab, setActiveTab] = React.useState("details");
 
   const applyPatientToForm = React.useCallback((patient) => {
     setFormData({
@@ -648,99 +684,125 @@ const PatientsPage = () => {
             <Card className="patients-panel">
               <div className="patients-section-header">
                 <h3>Patient Details</h3>
+                <div className="patients-tabs">
+                  <button
+                    className={activeTab === "details" ? "active" : ""}
+                    onClick={() => setActiveTab("details")}
+                  >
+                    Details
+                  </button>
+                  <button
+                    className={activeTab === "insurance" ? "active" : ""}
+                    onClick={() => setActiveTab("insurance")}
+                  >
+                    Insurance
+                  </button>
+                </div>
                 {selectedPatient ? (
                   <span className="patients-chip">
                     {selectedPatient.patientNumber}
                   </span>
                 ) : null}
               </div>
-
-              {detailsError ? (
-                <div className="patients-message error">{detailsError}</div>
-              ) : null}
-              {saveError ? (
-                <div className="patients-message error">{saveError}</div>
-              ) : null}
-              {saveSuccess ? (
-                <div className="patients-message success">{saveSuccess}</div>
-              ) : null}
-
-              {detailsLoading ? (
-                <div className="patients-message">Loading patient details...</div>
-              ) : canManagePatients && selectedPatient ? (
-                <form className="patients-form" onSubmit={handlePatientSave}>
-                  <PatientFormFields
-                    formData={formData}
-                    onChange={handleFormChange}
+              {activeTab === "insurance" ? (
+                selectedPatient ? (
+                  <InsuranceSection selectedPatient={selectedPatient} />
+                ) : (
+                  <EmptyState
+                    title="Select a patient"
+                    description="Choose a patient to view insurance details."
                   />
-
-                  <div className="patients-actions">
-                    <button
-                      type="button"
-                      className="patients-danger-btn"
-                      onClick={handleDeletePatient}
-                      disabled={deleteLoading || saveLoading}
-                    >
-                      {deleteLoading ? "Deleting..." : "Delete Patient"}
-                    </button>
-                    <button
-                      type="submit"
-                      className="patients-primary-btn"
-                      disabled={saveLoading || deleteLoading}
-                    >
-                      {saveLoading
-                        ? "Saving..."
-                        : "Update Patient"}
-                    </button>
-                  </div>
-                </form>
-              ) : canManagePatients ? (
-                <EmptyState
-                  title="No patient selected"
-                  description="Select a patient from the directory to edit details, or use Add Patient to create a new record."
-                />
-              ) : selectedPatient ? (
-                <div className="patients-readonly">
-                  <div className="patients-detail-grid">
-                    <div>
-                      <span>Name</span>
-                      <strong>
-                        {selectedPatient.firstName} {selectedPatient.lastName}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Patient Number</span>
-                      <strong>{selectedPatient.patientNumber}</strong>
-                    </div>
-                    <div>
-                      <span>Phone</span>
-                      <strong>{selectedPatient.phonePrimary}</strong>
-                    </div>
-                    <div>
-                      <span>Email</span>
-                      <strong>{selectedPatient.email || "N/A"}</strong>
-                    </div>
-                    <div>
-                      <span>DOB</span>
-                      <strong>{selectedPatient.dateOfBirth || "N/A"}</strong>
-                    </div>
-                    <div>
-                      <span>Address</span>
-                      <strong>
-                        {selectedPatient.addressLine1}, {selectedPatient.city},{" "}
-                        {selectedPatient.state} {selectedPatient.zipCode}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
+                )
               ) : (
-                <EmptyState
-                  title="Select a patient"
-                  description="Choose a patient from the directory to review their details."
-                />
+                <>
+                  {detailsError ? (
+                    <div className="patients-message error">{detailsError}</div>
+                  ) : null}
+
+                  {saveError ? (
+                    <div className="patients-message error">{saveError}</div>
+                  ) : null}
+                  {saveSuccess ? (
+                    <div className="patients-message success">{saveSuccess}</div>
+                  ) : null}
+
+                  {detailsLoading ? (
+                    <div className="patients-message">Loading patient details...</div>
+                  ) : canManagePatients && selectedPatient ? (
+                    <form className="patients-form" onSubmit={handlePatientSave}>
+                      <PatientFormFields
+                        formData={formData}
+                        onChange={handleFormChange}
+                      />
+
+                      <div className="patients-actions">
+                        <button
+                          type="button"
+                          className="patients-danger-btn"
+                          onClick={handleDeletePatient}
+                          disabled={deleteLoading || saveLoading}
+                        >
+                          {deleteLoading ? "Deleting..." : "Delete Patient"}
+                        </button>
+                        <button
+                          type="submit"
+                          className="patients-primary-btn"
+                          disabled={saveLoading || deleteLoading}
+                        >
+                          {saveLoading
+                            ? "Saving..."
+                            : "Update Patient"}
+                        </button>
+                      </div>
+                    </form>
+                  ) : canManagePatients ? (
+                    <EmptyState
+                      title="No patient selected"
+                      description="Select a patient from the directory to edit details, or use Add Patient to create a new record."
+                    />
+                  ) : selectedPatient ? (
+                    <div className="patients-readonly">
+                      <div className="patients-detail-grid">
+                        <div>
+                          <span>Name</span>
+                          <strong>
+                            {selectedPatient.firstName} {selectedPatient.lastName}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Patient Number</span>
+                          <strong>{selectedPatient.patientNumber}</strong>
+                        </div>
+                        <div>
+                          <span>Phone</span>
+                          <strong>{selectedPatient.phonePrimary}</strong>
+                        </div>
+                        <div>
+                          <span>Email</span>
+                          <strong>{selectedPatient.email || "N/A"}</strong>
+                        </div>
+                        <div>
+                          <span>DOB</span>
+                          <strong>{selectedPatient.dateOfBirth || "N/A"}</strong>
+                        </div>
+                        <div>
+                          <span>Address</span>
+                          <strong>
+                            {selectedPatient.addressLine1}, {selectedPatient.city},{" "}
+                            {selectedPatient.state} {selectedPatient.zipCode}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="Select a patient"
+                      description="Choose a patient from the directory to review their details."
+                    />
+                  )}
+                </>
               )}
             </Card>
-
           </div>
         </div>
       </div>

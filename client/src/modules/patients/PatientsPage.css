@@ -255,6 +255,31 @@
   cursor: pointer;
 }
 
+.patients-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.patients-tabs button {
+  border: none;
+  background: #eef2f7;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.patients-tabs button.active {
+  background: teal;
+  color: white;
+}
+
+.patients-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: flex-start; 
+}
+
 @media (max-width: 1150px) {
   .patients-grid {
     grid-template-columns: 1fr;
@@ -262,6 +287,7 @@
 }
 
 @media (max-width: 700px) {
+
   .patients-search,
   .patients-form-grid,
   .patients-detail-grid,
