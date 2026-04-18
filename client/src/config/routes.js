@@ -112,6 +112,17 @@ export const API_ENDPOINTS = {
     LIST: normalizePath("/patients"),
     DETAIL: (id) => normalizePath(`/patients/${id}`),
   },
+  PRESCRIPTIONS: {
+    LIST: normalizePath("/prescriptions"),
+    FHIR_SYNC: normalizePath("/prescriptions/fhir/sync"),
+    DETAIL: (id) => normalizePath(`/prescriptions/${id}`),
+    APPROVE_ET_IN: (id) =>
+      normalizePath(`/prescriptions/${id}/approve-et-in`),
+    INSURANCE: (id) => normalizePath(`/prescriptions/${id}/insurance`),
+  },
+  INVENTORY: {
+    LOTS: normalizePath("/inventory/lots"),
+  },
 };
 
 // API Base URL

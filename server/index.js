@@ -16,6 +16,8 @@ import "./models/Drug.js";
 import "./models/DrugPullAudit.js";
 import "./models/Patient.js";
 import "./models/PatientAudit.js"; // This imports PatientAuditLog
+import "./models/Prescription.js";
+import "./models/InventoryLot.js";
 import { startDrugPullWorker } from "./workers/drugPullWorker.js";
 
 const app = express();

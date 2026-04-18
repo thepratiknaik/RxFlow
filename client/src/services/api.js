@@ -295,7 +295,102 @@ class ApiService {
       method: "DELETE",
     });
   }
-  
+
+  async listPrescriptions({
+    status = "",
+    source = "",
+    page = 1,
+    limit = 25,
+  } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (String(status).trim()) {
+      params.set("status", String(status).trim());
+    }
+
+    if (String(source).trim()) {
+      params.set("source", String(source).trim());
+    }
+
+    return await this.request(
+      `${API_ENDPOINTS.PRESCRIPTIONS.LIST}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async getPrescription(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.DETAIL(id), {
+      method: "GET",
+    });
+  }
+
+  async syncFhirPrescriptions({ maxCount = 25, fhirBaseUrl = "" } = {}) {
+    const body = { maxCount };
+    if (fhirBaseUrl && String(fhirBaseUrl).trim()) {
+      body.fhirBaseUrl = String(fhirBaseUrl).trim();
+    }
+
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.FHIR_SYNC, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async createPrescription(data) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.LIST, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async approvePrescriptionEtIn(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.APPROVE_ET_IN(id), {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  }
+
+  async patchPrescriptionInsurance(id, data) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.INSURANCE(id), {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listInventoryLots({
+    page = 1,
+    limit = 50,
+    belowThreshold = false,
+  } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (belowThreshold) {
+      params.set("belowThreshold", "true");
+    }
+
+    return await this.request(
+      `${API_ENDPOINTS.INVENTORY.LOTS}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async createInventoryLot(data) {
+    return await this.request(API_ENDPOINTS.INVENTORY.LOTS, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   getToken() {
     return localStorage.getItem("token");
   }
