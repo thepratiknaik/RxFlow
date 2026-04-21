@@ -170,6 +170,32 @@
   font-weight: 700;
 }
 
+.prescribers-tab-strip {
+  display: inline-flex;
+  gap: 0.45rem;
+  padding: 0.3rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  background: var(--light-gray);
+  border: 1px solid var(--medium-gray);
+}
+
+.prescribers-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-light);
+  padding: 0.7rem 0.95rem;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.prescribers-tab.active {
+  background: #ffffff;
+  color: var(--text-dark);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
 .prescribers-spotlight,
 .prescribers-spotlight-badge,
 .prescribers-detail-grid > div {
@@ -193,6 +219,93 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
 }
+
+.prescribers-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.prescribers-history-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.prescribers-history-summary div,
+.prescribers-history-item {
+  border: 1px solid var(--medium-gray);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.prescribers-history-summary div {
+  padding: 0.9rem 1rem;
+}
+
+.prescribers-history-summary span,
+.prescribers-history-meta span,
+.prescribers-history-note {
+  color: var(--text-light);
+}
+
+.prescribers-history-summary strong {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text-dark);
+  font-size: 1.25rem;
+}
+
+.prescribers-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.prescribers-history-item {
+  padding: 1rem;
+}
+
+.prescribers-history-item-header,
+.prescribers-history-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.prescribers-history-item-header {
+  align-items: flex-start;
+}
+
+.prescribers-history-item-header strong {
+  color: var(--text-dark);
+}
+
+.prescribers-history-item-header p,
+.prescribers-history-note {
+  margin: 0.25rem 0 0;
+}
+
+.prescribers-history-meta {
+  margin-top: 0.85rem;
+}
+
+.prescribers-history-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.prescribers-history-pill.status-approved { background: #dcfce7; color: #15803d; }
+.prescribers-history-pill.status-rejected { background: #ffe4e6; color: #be123c; }
+.prescribers-history-pill.status-pending { background: #fef3c7; color: #b45309; }
+.prescribers-history-pill.status-expired { background: #e2e8f0; color: #475569; }
+.prescribers-history-pill.status-completed { background: #dbeafe; color: #1d4ed8; }
+.prescribers-history-pill.status-not_sent { background: #f1f5f9; color: #334155; }
 
 .prescribers-actions {
   margin-top: 1rem;
@@ -243,13 +356,16 @@
   .prescribers-actions,
   .prescribers-list-item,
   .prescribers-spotlight,
-  .prescribers-modal-header {
+  .prescribers-modal-header,
+  .prescribers-history-item-header,
+  .prescribers-history-meta {
     flex-direction: column;
     align-items: stretch;
   }
 
   .prescribers-form-grid,
-  .prescribers-detail-grid {
+  .prescribers-detail-grid,
+  .prescribers-history-summary {
     grid-template-columns: 1fr;
   }
 }

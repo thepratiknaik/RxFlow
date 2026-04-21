@@ -492,6 +492,12 @@ class ApiService {
     });
   }
 
+  async getPrescriberHistory(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIBERS.HISTORY(id), {
+      method: "GET",
+    });
+  }
+
   async deletePrescriber(id) {
     return await this.request(API_ENDPOINTS.PRESCRIBERS.DETAIL(id), {
       method: "DELETE",

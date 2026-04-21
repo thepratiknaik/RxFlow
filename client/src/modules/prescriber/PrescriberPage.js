@@ -13,6 +13,38 @@ const EMPTY_FORM = {
   npi: "",
 };
 
+const formatDateTime = (value) => {
+  if (!value) {
+    return "-";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "-";
+  }
+
+  return parsed.toLocaleString();
+};
+
+const formatHistoryStatus = (value) => {
+  switch (String(value || "").toLowerCase()) {
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    case "pending":
+      return "Pending";
+    case "expired":
+      return "Expired";
+    case "completed":
+      return "Completed";
+    case "not_sent":
+      return "Not sent";
+    default:
+      return "Unknown";
+  }
+};
+
 const PrescriberFormFields = ({ formData, onChange }) => (
   <div className="prescribers-form-grid">
     <label>
@@ -76,6 +108,10 @@ const PrescribersPage = () => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("profile");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [historyData, setHistoryData] = useState({ counts: null, history: [] });
 
   const loadPrescribers = React.useCallback(async (query = "") => {
     setLoading(true);
@@ -116,6 +152,50 @@ const PrescribersPage = () => {
   }, [loadPrescribers, search]);
 
   const selectedPrescriber = prescribers.find((p) => p.id === selectedId) || null;
+
+  useEffect(() => {
+    setActiveTab("profile");
+    setHistoryError("");
+    setHistoryData({ counts: null, history: [] });
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (activeTab !== "history" || !selectedPrescriber?.id) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      setHistoryError("");
+
+      try {
+        const response = await api.getPrescriberHistory(selectedPrescriber.id);
+        if (!cancelled) {
+          setHistoryData({
+            counts: response?.data?.counts || null,
+            history: response?.data?.history || [],
+          });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setHistoryError(err.message || "Failed to load prescriber history.");
+          setHistoryData({ counts: null, history: [] });
+        }
+      } finally {
+        if (!cancelled) {
+          setHistoryLoading(false);
+        }
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, selectedPrescriber?.id]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -292,35 +372,136 @@ const PrescribersPage = () => {
               />
             ) : (
               <>
-                <div className="prescribers-spotlight">
-                  <div>
-                    <h4>{selectedPrescriber.name}</h4>
-                    <p>{selectedPrescriber.email}</p>
-                  </div>
-                  <div className="prescribers-spotlight-badge">
-                    <span>Contact</span>
-                    <strong>{selectedPrescriber.contact}</strong>
-                  </div>
+                <div className="prescribers-tab-strip" role="tablist" aria-label="Prescriber tabs">
+                  <button
+                    type="button"
+                    className={`prescribers-tab ${activeTab === "profile" ? "active" : ""}`}
+                    onClick={() => setActiveTab("profile")}
+                  >
+                    Profile
+                  </button>
+                  <button
+                    type="button"
+                    className={`prescribers-tab ${activeTab === "history" ? "active" : ""}`}
+                    onClick={() => setActiveTab("history")}
+                  >
+                    Prescription history
+                  </button>
                 </div>
 
-                <div className="prescribers-detail-grid">
-                  <div>
-                    <span>Name</span>
-                    <strong>{selectedPrescriber.name}</strong>
+                {activeTab === "profile" ? (
+                  <>
+                    <div className="prescribers-spotlight">
+                      <div>
+                        <h4>{selectedPrescriber.name}</h4>
+                        <p>{selectedPrescriber.email}</p>
+                      </div>
+                      <div className="prescribers-spotlight-badge">
+                        <span>Contact</span>
+                        <strong>{selectedPrescriber.contact}</strong>
+                      </div>
+                    </div>
+
+                    <div className="prescribers-detail-grid">
+                      <div>
+                        <span>Name</span>
+                        <strong>{selectedPrescriber.name}</strong>
+                      </div>
+                      <div>
+                        <span>NPI</span>
+                        <strong>{selectedPrescriber.npi}</strong>
+                      </div>
+                      <div>
+                        <span>Contact</span>
+                        <strong>{selectedPrescriber.contact}</strong>
+                      </div>
+                      <div>
+                        <span>Email</span>
+                        <strong>{selectedPrescriber.email}</strong>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="prescribers-history-panel">
+                    <div className="prescribers-history-summary">
+                      <div>
+                        <span>Approved</span>
+                        <strong>{historyData.counts?.approved || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Rejected</span>
+                        <strong>{historyData.counts?.rejected || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Pending</span>
+                        <strong>{historyData.counts?.pending || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Expired</span>
+                        <strong>{historyData.counts?.expired || 0}</strong>
+                      </div>
+                    </div>
+
+                    {historyError ? (
+                      <div className="prescribers-message error">{historyError}</div>
+                    ) : null}
+
+                    {historyLoading ? (
+                      <div className="prescribers-message">Loading prescription history...</div>
+                    ) : historyData.history.length === 0 ? (
+                      <EmptyState
+                        title="No prescription history"
+                        description="This prescriber does not have any linked review activity yet."
+                      />
+                    ) : (
+                      <div className="prescribers-history-list">
+                        {historyData.history.map((item) => {
+                          const patientName = item?.patient
+                            ? `${item.patient.firstName || ""} ${item.patient.lastName || ""}`.trim()
+                            : "Unknown patient";
+                          const reviewStatus = item?.reviewSummary?.latestStatus || "not_sent";
+                          const latestReview = item?.latestReview || null;
+
+                          return (
+                            <article key={item.id} className="prescribers-history-item">
+                              <div className="prescribers-history-item-header">
+                                <div>
+                                  <strong>{item.medicationDisplay || "Medication"}</strong>
+                                  <p>
+                                    {patientName} | RX {item.prescriptionNumber}
+                                  </p>
+                                </div>
+                                <span
+                                  className={`prescribers-history-pill status-${reviewStatus}`}
+                                >
+                                  {formatHistoryStatus(reviewStatus)}
+                                </span>
+                              </div>
+
+                              <div className="prescribers-history-meta">
+                                <span>Prescription status: {item.status || "-"}</span>
+                                <span>Verified by: {item?.fhirRaw?.verified_by || "-"}</span>
+                                <span>Sent: {formatDateTime(item?.reviewSummary?.latestSentAt)}</span>
+                                <span>
+                                  Reviewed: {formatDateTime(item?.reviewSummary?.latestReviewedAt)}
+                                </span>
+                              </div>
+
+                              {latestReview ? (
+                                <div className="prescribers-history-note">
+                                  Review recipient:{" "}
+                                  {latestReview.recipientName ||
+                                    latestReview.recipientEmail ||
+                                    selectedPrescriber.email}
+                                </div>
+                              ) : null}
+                            </article>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span>NPI</span>
-                    <strong>{selectedPrescriber.npi}</strong>
-                  </div>
-                  <div>
-                    <span>Contact</span>
-                    <strong>{selectedPrescriber.contact}</strong>
-                  </div>
-                  <div>
-                    <span>Email</span>
-                    <strong>{selectedPrescriber.email}</strong>
-                  </div>
-                </div>
+                )}
 
                 {canManagePrescribers ? (
                   <div className="prescribers-actions">

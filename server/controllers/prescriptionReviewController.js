@@ -184,6 +184,13 @@ const performReviewDecision = async (req, res, decision) => {
     }
 
     const nextStatus = REVIEW_DECISION_STATUS[decision];
+    const resolvedPrescriber = await getSafePrescriberInfo(prescription);
+    const approvedByName =
+      resolvedPrescriber?.name ||
+      tokenRecord.recipientName ||
+      tokenRecord.recipientEmail ||
+      (prescription.fhirRaw || {}).verified_by ||
+      null;
 
     await prescription.update(
       {
@@ -192,16 +199,16 @@ const performReviewDecision = async (req, res, decision) => {
           ...(prescription.fhirRaw || {}),
           verified_by:
             decision === "approved"
-              ? tokenRecord.recipientName ||
-                tokenRecord.recipientEmail ||
-                (prescription.fhirRaw || {}).verified_by ||
-                null
+              ? approvedByName
               : (prescription.fhirRaw || {}).verified_by || null,
           prescriberReview: {
             decision,
             reviewedAt: new Date().toISOString(),
             reviewedBy: tokenRecord.recipientEmail,
-            reviewedByName: tokenRecord.recipientName || null,
+            reviewedByName:
+              decision === "approved"
+                ? approvedByName
+                : tokenRecord.recipientName || resolvedPrescriber?.name || null,
           },
         },
       },
@@ -222,13 +229,13 @@ const performReviewDecision = async (req, res, decision) => {
       entityType: "prescription_review",
       entityId: tokenRecord.id,
       action: decision,
-      summary: `Prescription ${prescription.prescriptionNumber} was ${decision} by ${tokenRecord.recipientName || tokenRecord.recipientEmail || "prescriber"}.`,
+      summary: `Prescription ${prescription.prescriptionNumber} was ${decision} by ${approvedByName || "prescriber"}.`,
       metadata: {
         prescriptionId: prescription.id,
         prescriptionNumber: prescription.prescriptionNumber,
         decision,
         recipientEmail: tokenRecord.recipientEmail,
-        recipientName: tokenRecord.recipientName,
+        recipientName: approvedByName,
       },
       ...buildActorContext(req),
     });

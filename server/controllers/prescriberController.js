@@ -1,5 +1,8 @@
 import { Op } from "sequelize";
 import Prescriber from "../models/Prescriber.js";
+import Patient from "../models/Patient.js";
+import Prescription from "../models/Prescription.js";
+import PrescriptionReviewToken from "../models/PrescriptionReviewToken.js";
 import {
   buildActorContext,
   writeAuditLog,
@@ -7,6 +10,93 @@ import {
 
 const toLimit = (value, fallback = 25, max = 100) =>
   Math.min(Math.max(Number(value) || fallback, 1), max);
+
+const getReviewLifecycleStatus = (reviewToken) => {
+  if (!reviewToken) {
+    return "not_sent";
+  }
+
+  if (reviewToken.decision === "approved") {
+    return "approved";
+  }
+
+  if (reviewToken.decision === "rejected") {
+    return "rejected";
+  }
+
+  if (reviewToken.usedAt) {
+    return "completed";
+  }
+
+  if (
+    reviewToken.expiresAt &&
+    new Date(reviewToken.expiresAt).getTime() < Date.now()
+  ) {
+    return "expired";
+  }
+
+  return "pending";
+};
+
+const toReviewHistoryEntry = (reviewToken) => ({
+  id: reviewToken.id,
+  recipientEmail: reviewToken.recipientEmail,
+  recipientName: reviewToken.recipientName,
+  reviewUrl: reviewToken.reviewUrl,
+  sentAt: reviewToken.sentAt,
+  expiresAt: reviewToken.expiresAt,
+  usedAt: reviewToken.usedAt,
+  decision: reviewToken.decision,
+  status: getReviewLifecycleStatus(reviewToken),
+});
+
+const attachReviewHistory = async (prescriptions) => {
+  if (!Array.isArray(prescriptions) || !prescriptions.length) {
+    return [];
+  }
+
+  const prescriptionIds = prescriptions.map((item) => item.id).filter(Boolean);
+  const reviewTokens = await PrescriptionReviewToken.findAll({
+    where: {
+      prescriptionId: {
+        [Op.in]: prescriptionIds,
+      },
+    },
+    order: [
+      ["sentAt", "DESC"],
+      ["createdat", "DESC"],
+    ],
+  });
+
+  const reviewMap = new Map();
+
+  reviewTokens.forEach((token) => {
+    const existing = reviewMap.get(token.prescriptionId) || [];
+    existing.push(token);
+    reviewMap.set(token.prescriptionId, existing);
+  });
+
+  return prescriptions.map((prescription) => {
+    const reviewHistory = (reviewMap.get(prescription.id) || []).map(
+      toReviewHistoryEntry,
+    );
+    const latestReview = reviewHistory[0] || null;
+
+    return {
+      ...prescription.toJSON(),
+      reviewHistory,
+      latestReview,
+      reviewSummary: {
+        hasBeenSent: reviewHistory.length > 0,
+        totalSent: reviewHistory.length,
+        latestStatus: latestReview?.status || "not_sent",
+        latestDecision: latestReview?.decision || null,
+        latestSentAt: latestReview?.sentAt || null,
+        latestReviewedAt: latestReview?.usedAt || null,
+      },
+    };
+  });
+};
 
 export const listPrescribers = async (req, res) => {
   try {
@@ -103,6 +193,135 @@ export const createPrescriber = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to create prescriber.",
+    });
+  }
+};
+
+export const getPrescriberHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const prescriber = await Prescriber.findByPk(id);
+
+    if (!prescriber) {
+      return res.status(404).json({
+        success: false,
+        message: "Prescriber not found.",
+      });
+    }
+
+    const directMatches = await Prescription.findAll({
+      where: {
+        [Op.or]: [
+          {
+            fhirRaw: {
+              prescriber_id: prescriber.npi,
+            },
+          },
+          {
+            fhirRaw: {
+              prescriber_id: prescriber.email,
+            },
+          },
+          {
+            prescriberDisplay: {
+              [Op.iLike]: `%${prescriber.name}%`,
+            },
+          },
+        ],
+      },
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+          attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
+          required: false,
+        },
+      ],
+      order: [["createdat", "DESC"]],
+    });
+
+    const reviewTokens = await PrescriptionReviewToken.findAll({
+      where: {
+        recipientEmail: prescriber.email,
+      },
+      order: [
+        ["sentAt", "DESC"],
+        ["createdat", "DESC"],
+      ],
+    });
+
+    const tokenPrescriptionIds = [
+      ...new Set(reviewTokens.map((token) => token.prescriptionId).filter(Boolean)),
+    ];
+
+    const tokenMatches = tokenPrescriptionIds.length
+      ? await Prescription.findAll({
+          where: {
+            id: {
+              [Op.in]: tokenPrescriptionIds,
+            },
+          },
+          include: [
+            {
+              model: Patient,
+              as: "patient",
+              attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
+              required: false,
+            },
+          ],
+          order: [["createdat", "DESC"]],
+        })
+      : [];
+
+    const mergedPrescriptions = [
+      ...new Map(
+        [...directMatches, ...tokenMatches].map((prescription) => [
+          prescription.id,
+          prescription,
+        ]),
+      ).values(),
+    ];
+
+    const history = await attachReviewHistory(mergedPrescriptions);
+    const counts = history.reduce(
+      (summary, item) => {
+        const status = item.reviewSummary?.latestStatus || "not_sent";
+
+        if (status === "approved") {
+          summary.approved += 1;
+        } else if (status === "rejected") {
+          summary.rejected += 1;
+        } else if (status === "pending") {
+          summary.pending += 1;
+        } else if (status === "expired") {
+          summary.expired += 1;
+        } else {
+          summary.notSent += 1;
+        }
+
+        return summary;
+      },
+      {
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+        expired: 0,
+        notSent: 0,
+      },
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        prescriber,
+        counts,
+        history,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to load prescriber history.",
     });
   }
 };

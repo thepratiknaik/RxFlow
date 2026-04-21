@@ -2,6 +2,7 @@ import express from "express";
 import {
   createPrescriber,
   deletePrescriber,
+  getPrescriberHistory,
   listPrescribers,
   updatePrescriber,
 } from "../controllers/prescriberController.js";
@@ -15,6 +16,7 @@ export const routeConfig = {
 };
 
 router.get("/", verifyToken, listPrescribers);
+router.get("/:id/history", verifyToken, getPrescriberHistory);
 
 router.post(
   "/",
