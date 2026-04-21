@@ -621,6 +621,59 @@ const endpointMetadata = {
       ],
     },
   },
+  "POST /api/prescriptions/entry": {
+    name: "Create Prescription Entry",
+    description:
+      "Creates a prescription using the entry payload shape with support for multiple drug names. Do not send prescription_id/id or created_at; IDs and creation date are assigned automatically by the database.",
+    authRequired: true,
+    requestBody: {
+      label: "Prescription entry payload",
+      fields: [
+        {
+          name: "pharmacy_id",
+          type: "string",
+          required: false,
+          example: "PHARMACY-DEMO",
+        },
+        {
+          name: "patient_id",
+          type: "string (UUID)",
+          required: true,
+          example: "",
+        },
+        {
+          name: "prescriber_id",
+          type: "string",
+          required: false,
+          example: "PRESC-001",
+        },
+        {
+          name: "drug_name",
+          type: "string[]",
+          required: true,
+          example: ["Amoxicillin 500 mg", "Ibuprofen 200 mg"],
+        },
+        {
+          name: "status",
+          type: "string",
+          required: false,
+          example: "New",
+        },
+        {
+          name: "quantity",
+          type: "number",
+          required: true,
+          example: 30,
+        },
+        {
+          name: "verified_by",
+          type: "string",
+          required: false,
+          example: "",
+        },
+      ],
+    },
+  },
   "POST /api/prescriptions/:id/approve-et-in": {
     name: "Approve ET-In (Pharmacist only)",
     description:

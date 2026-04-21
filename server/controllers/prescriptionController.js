@@ -1,5 +1,6 @@
 import Patient from "../models/Patient.js";
 import Prescription from "../models/Prescription.js";
+import User from "../models/User.js";
 import {
   generatePrescriptionNumber,
   syncMedicationRequestsFromFhir,
@@ -8,16 +9,79 @@ import {
 const toLimit = (value, fallback = 25, max = 100) =>
   Math.min(Math.max(Number(value) || fallback, 1), max);
 
+const STATUS_MAP = {
+  New: "new",
+  "In Process": "in_process",
+  Ready: "ready",
+  "Picked Up": "picked_up",
+};
+
+const STATUS_MAP_REVERSE = {
+  new: "New",
+  in_process: "In Process",
+  ready: "Ready",
+  picked_up: "Picked Up",
+  cancelled: "Cancelled",
+};
+
+const hasClientProvidedPrescriptionId = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  return ["id", "prescription_id", "prescriptionId", "prescriptionNumber"].some(
+    (key) =>
+      Object.prototype.hasOwnProperty.call(payload, key) &&
+      payload[key] != null &&
+      String(payload[key]).trim() !== "",
+  );
+};
+
+const hasClientProvidedCreatedDate = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  return (
+    Object.prototype.hasOwnProperty.call(payload, "created_at") &&
+    payload.created_at != null &&
+    String(payload.created_at).trim() !== ""
+  );
+};
+
+const toPrescriptionEntryResponse = (prescription, enteredByName = null) => {
+  const rawMeta = prescription?.fhirRaw || {};
+  const drugNames = Array.isArray(rawMeta?.drug_name)
+    ? rawMeta.drug_name
+    : String(prescription?.medicationDisplay || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+  return {
+    prescription_id: prescription.id,
+    pharmacy_id: rawMeta?.pharmacy_id || "PHARMACY-DEMO",
+    patient_id: prescription.patientId,
+    prescriber_id: rawMeta?.prescriber_id || null,
+    drug_name: drugNames,
+    status: STATUS_MAP_REVERSE[prescription.status] || "New",
+    quantity:
+      prescription.quantityValue != null
+        ? Number(prescription.quantityValue)
+        : null,
+    entered_by: enteredByName || rawMeta?.entered_by || null,
+    verified_by: rawMeta?.verified_by || null,
+    created_at: prescription.createdat,
+    source: prescription.source,
+  };
+};
+
 export const listPrescriptions = async (req, res) => {
   try {
     const limit = toLimit(req.query?.limit, 25, 100);
     const page = Math.max(Number(req.query?.page) || 1, 1);
-    const status = req.query?.status
-      ? String(req.query.status).trim()
-      : null;
-    const source = req.query?.source
-      ? String(req.query.source).trim()
-      : null;
+    const status = req.query?.status ? String(req.query.status).trim() : null;
+    const source = req.query?.source ? String(req.query.source).trim() : null;
 
     const where = {};
     if (status) {
@@ -36,13 +100,7 @@ export const listPrescriptions = async (req, res) => {
         {
           model: Patient,
           as: "patient",
-          attributes: [
-            "id",
-            "firstName",
-            "lastName",
-            "patientNumber",
-            "mrn",
-          ],
+          attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
           required: false,
         },
       ],
@@ -101,6 +159,14 @@ export const getPrescription = async (req, res) => {
 
 export const createPrescriptionManual = async (req, res) => {
   try {
+    if (hasClientProvidedPrescriptionId(req.body)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Do not provide prescription ID fields. The database assigns prescription IDs automatically.",
+      });
+    }
+
     const {
       patientId,
       medicationDisplay,
@@ -177,13 +243,7 @@ export const createPrescriptionManual = async (req, res) => {
         {
           model: Patient,
           as: "patient",
-          attributes: [
-            "id",
-            "firstName",
-            "lastName",
-            "patientNumber",
-            "mrn",
-          ],
+          attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
           required: false,
         },
       ],
@@ -198,6 +258,109 @@ export const createPrescriptionManual = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to create prescription.",
+    });
+  }
+};
+
+export const createPrescriptionEntry = async (req, res) => {
+  try {
+    if (hasClientProvidedPrescriptionId(req.body)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Do not provide prescription ID fields. The database assigns prescription IDs automatically.",
+      });
+    }
+
+    if (hasClientProvidedCreatedDate(req.body)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Do not provide created_at. The database sets creation date automatically.",
+      });
+    }
+
+    const {
+      pharmacy_id,
+      patient_id,
+      prescriber_id,
+      drug_name,
+      status,
+      quantity,
+      verified_by,
+    } = req.body || {};
+
+    if (!patient_id) {
+      return res.status(400).json({
+        success: false,
+        message: "patient_id is required.",
+      });
+    }
+
+    const patient = await Patient.findByPk(patient_id);
+    if (!patient) {
+      return res.status(400).json({
+        success: false,
+        message: "Patient not found for patient_id.",
+      });
+    }
+
+    const drugNameArray = Array.isArray(drug_name)
+      ? drug_name.map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+
+    if (!drugNameArray.length) {
+      return res.status(400).json({
+        success: false,
+        message: "drug_name must be a non-empty array of drug names.",
+      });
+    }
+
+    const normalizedStatus =
+      STATUS_MAP[String(status || "New").trim()] || "new";
+    const normalizedQuantity = Number(quantity);
+
+    if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "quantity must be a positive number.",
+      });
+    }
+
+    const user = req.user?.id ? await User.findByPk(req.user.id) : null;
+    const enteredByName = user?.fullname || "Unknown User";
+    const prescriptionNumber = await generatePrescriptionNumber();
+
+    const prescription = await Prescription.create({
+      prescriptionNumber,
+      status: normalizedStatus,
+      source: "manual",
+      patientId: patient_id,
+      medicationDisplay: drugNameArray.join(", "),
+      quantityValue: normalizedQuantity,
+      quantityUnit: "units",
+      prescriberDisplay: prescriber_id ? String(prescriber_id).trim() : null,
+      fhirRaw: {
+        pharmacy_id: pharmacy_id || "PHARMACY-DEMO",
+        prescriber_id: prescriber_id || null,
+        drug_name: drugNameArray,
+        entered_by: enteredByName,
+        verified_by: verified_by || null,
+      },
+      etInApproved: false,
+      etInApprovedAt: null,
+      etInApprovedByUserId: null,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Prescription entry created successfully.",
+      data: toPrescriptionEntryResponse(prescription, enteredByName),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create prescription entry.",
     });
   }
 };
@@ -218,7 +381,8 @@ export const approvePrescriptionEtIn = async (req, res) => {
     if (prescription.status !== "new") {
       return res.status(400).json({
         success: false,
-        message: "ET-In approval applies only to prescriptions in the New queue.",
+        message:
+          "ET-In approval applies only to prescriptions in the New queue.",
       });
     }
 
@@ -239,13 +403,7 @@ export const approvePrescriptionEtIn = async (req, res) => {
         {
           model: Patient,
           as: "patient",
-          attributes: [
-            "id",
-            "firstName",
-            "lastName",
-            "patientNumber",
-            "mrn",
-          ],
+          attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
           required: false,
         },
       ],
@@ -267,11 +425,8 @@ export const approvePrescriptionEtIn = async (req, res) => {
 export const patchPrescriptionInsurance = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      insuranceProviderName,
-      insurancePolicyNumber,
-      insuranceGroupId,
-    } = req.body || {};
+    const { insuranceProviderName, insurancePolicyNumber, insuranceGroupId } =
+      req.body || {};
 
     const prescription = await Prescription.findByPk(id);
 
@@ -344,7 +499,8 @@ export const syncFhirPrescriptions = async (req, res) => {
       data: summary,
     });
   } catch (error) {
-    const status = error.status && Number.isInteger(error.status) ? error.status : 502;
+    const status =
+      error.status && Number.isInteger(error.status) ? error.status : 502;
     return res.status(status >= 400 && status < 600 ? status : 502).json({
       success: false,
       message: error.message || "Failed to sync prescriptions from FHIR.",

@@ -121,6 +121,7 @@ export const API_ENDPOINTS = {
   },
   PRESCRIPTIONS: {
     LIST: normalizePath("/prescriptions"),
+    ENTRY: normalizePath("/prescriptions/entry"),
     FHIR_SYNC: normalizePath("/prescriptions/fhir/sync"),
     DETAIL: (id) => normalizePath(`/prescriptions/${id}`),
     APPROVE_ET_IN: (id) => normalizePath(`/prescriptions/${id}/approve-et-in`),

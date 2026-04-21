@@ -432,6 +432,13 @@ class ApiService {
     });
   }
 
+  async createPrescriptionEntry(data) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.ENTRY, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   async approvePrescriptionEtIn(id) {
     return await this.request(API_ENDPOINTS.PRESCRIPTIONS.APPROVE_ET_IN(id), {
       method: "POST",

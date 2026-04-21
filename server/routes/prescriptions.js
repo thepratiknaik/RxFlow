@@ -1,6 +1,7 @@
 import express from "express";
 import {
   approvePrescriptionEtIn,
+  createPrescriptionEntry,
   createPrescriptionManual,
   getPrescription,
   listPrescriptions,
@@ -34,6 +35,13 @@ router.post(
   verifyToken,
   authorize(["user", "pharmacist", "admin"]),
   createPrescriptionManual,
+);
+
+router.post(
+  "/entry",
+  verifyToken,
+  authorize(["user", "pharmacist", "admin"]),
+  createPrescriptionEntry,
 );
 
 router.post(
