@@ -15,6 +15,32 @@ const EMPTY_LOT_FORM = {
   minimumLevel: "10",
 };
 
+const getLotStatus = (lot) => {
+  const expiryValue = lot?.expiryDate ? new Date(`${lot.expiryDate}T00:00:00`) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (expiryValue && !Number.isNaN(expiryValue.getTime())) {
+    if (expiryValue.getTime() < today.getTime()) {
+      return { tone: "expired", label: "Expired" };
+    }
+
+    const daysUntilExpiry = Math.ceil(
+      (expiryValue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (daysUntilExpiry <= 30) {
+      return { tone: "expiring", label: "Expiring soon" };
+    }
+  }
+
+  if (lot?.belowThreshold) {
+    return { tone: "low", label: "Low stock" };
+  }
+
+  return { tone: "ok", label: "Stable" };
+};
+
 const InventoryPage = () => {
   const { user } = useAuth();
   const canPullDrugs = ["admin", "pharmacist"].includes(
@@ -364,31 +390,6 @@ const InventoryPage = () => {
   return (
     <AppShell title="Inventory">
       <div className="inventory-page inventory-redesign">
-        <section className="inventory-hero">
-          <div>
-            <p className="inventory-eyebrow">Inventory control</p>
-            <h2>Manage catalog visibility and real stock from one workspace.</h2>
-            <p className="inventory-subtitle">
-              Add, update, and delete stock lots while keeping low-stock risk,
-              pull jobs, and audit activity in view.
-            </p>
-          </div>
-          <div className="inventory-hero-kpis">
-            <div>
-              <span>Lot rows</span>
-              <strong>{lotsSummary.totalLotRows ?? 0}</strong>
-            </div>
-            <div>
-              <span>Below minimum</span>
-              <strong>{lotsSummary.belowThresholdTotal ?? 0}</strong>
-            </div>
-            <div>
-              <span>Catalog records</span>
-              <strong>{pagination.total ?? 0}</strong>
-            </div>
-          </div>
-        </section>
-
         <div className="inventory-top-grid">
           <Card className="inventory-panel inventory-panel-wide inventory-stock-panel">
             <div className="inventory-toolbar">
@@ -453,14 +454,17 @@ const InventoryPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {lots.map((lot) => (
-                      <tr
-                        key={lot.id}
-                        className={`${lot.belowThreshold ? "inventory-row-low" : ""}${
-                          selectedLotId === lot.id ? " inventory-row-selected" : ""
-                        }`}
-                        onClick={() => setSelectedLotId(lot.id)}
-                      >
+                    {lots.map((lot) => {
+                      const lotStatus = getLotStatus(lot);
+
+                      return (
+                        <tr
+                          key={lot.id}
+                          className={`${lot.belowThreshold ? "inventory-row-low" : ""}${
+                            selectedLotId === lot.id ? " inventory-row-selected" : ""
+                          }`}
+                          onClick={() => setSelectedLotId(lot.id)}
+                        >
                         <td>
                           <div className="inventory-drug-name">
                             {lot.drugDisplayName || "-"}
@@ -475,13 +479,9 @@ const InventoryPage = () => {
                         <td>{lot.expiryDate || "-"}</td>
                         <td>
                           <span
-                            className={`inventory-status-badge ${
-                              lot.belowThreshold
-                                ? "inventory-status-low"
-                                : "inventory-status-ok"
-                            }`}
+                            className={`inventory-status-badge inventory-status-${lotStatus.tone}`}
                           >
-                            {lot.belowThreshold ? "Low stock" : "Stable"}
+                            {lotStatus.label}
                           </span>
                         </td>
                         {canManageLots ? (
@@ -498,8 +498,9 @@ const InventoryPage = () => {
                             </button>
                           </td>
                         ) : null}
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

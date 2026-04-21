@@ -2,7 +2,6 @@ import React from "react";
 import AppShell from "../../components/AppShell.js";
 import Card from "../../components/Card.js";
 import EmptyState from "../../components/EmptyState.js";
-import { useAuth } from "../../context/AuthContext.js";
 import api from "../../services/api.js";
 import "./DashboardPage.css";
 
@@ -15,9 +14,9 @@ const formatDateTime = (value) => {
 };
 
 const DashboardPage = () => {
-  const { user } = useAuth();
+  const currentUser = api.getUser();
   const canViewAuditLogs = ["pharmacist", "admin"].includes(
-    String(user?.role || "").toLowerCase(),
+    String(currentUser?.role || "").toLowerCase(),
   );
 
   const [summary, setSummary] = React.useState({
@@ -80,22 +79,6 @@ const DashboardPage = () => {
   return (
     <AppShell title="Dashboard">
       <div className="dashboard-page">
-        <section className="dashboard-hero">
-          <div>
-            <p className="dashboard-eyebrow">Operations snapshot</p>
-            <h2>Run the pharmacy from one live board.</h2>
-            <p className="dashboard-hero-copy">
-              Track queue pressure, stock risk, patient load, and review activity
-              without hopping between modules.
-            </p>
-          </div>
-          <div className="dashboard-hero-badge">
-            <span>Signed in as</span>
-            <strong>{user?.fullname || "RxFlow user"}</strong>
-            <em>{user?.role || "user"}</em>
-          </div>
-        </section>
-
         {error ? <div className="dashboard-message error">{error}</div> : null}
         {loading ? <div className="dashboard-message">Loading dashboard...</div> : null}
 

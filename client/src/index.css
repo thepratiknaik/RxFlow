@@ -10,38 +10,36 @@
 
 /* CSS Variables */
 :root {
-  --navy: #0B1F3B;
-  --navy-light: #1a3a5c;
-  --navy-dark: #050f1f;
-  --teal: #00B3A4;
-  --teal-dark: #008f86;
-  --accent: #00D4C4;
-  --soft-bg: #F4F8FB;
-  --light-gray: #F0F5FA;
-  --medium-gray: #E8EDF3;
-  --dark-gray: #2C3E50;
-  --text-dark: #1A1A1A;
-  --text-light: #667085;
-  --text-muted: #9CA3AF;
-  --success: #10B981;
+  --navy: #1f3654;
+  --navy-light: #355372;
+  --navy-dark: #15253a;
+  --teal: #0f766e;
+  --teal-dark: #0b5c56;
+  --accent: #2563eb;
+  --soft-bg: #f5f7fb;
+  --light-gray: #f8fafc;
+  --medium-gray: #e2e8f0;
+  --dark-gray: #334155;
+  --text-dark: #0f172a;
+  --text-light: #64748b;
+  --text-muted: #94a3b8;
+  --success: #15803d;
   --border-radius: 12px;
   --border-radius-lg: 16px;
-  --box-shadow: 0 4px 12px rgba(11, 31, 59, 0.08);
-  --box-shadow-md: 0 8px 24px rgba(11, 31, 59, 0.12);
-  --box-shadow-lg: 0 16px 48px rgba(11, 31, 59, 0.15);
-  --box-shadow-hover: 0 12px 32px rgba(0, 179, 164, 0.15);
+  --box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  --box-shadow-md: 0 10px 26px rgba(15, 23, 42, 0.08);
+  --box-shadow-lg: 0 18px 42px rgba(15, 23, 42, 0.1);
+  --box-shadow-hover: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
 
 /* Body Styles */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
   color: var(--text-dark);
-  background-color: #ffffff;
+  background-color: var(--soft-bg);
 }
 
 /* ===========================================

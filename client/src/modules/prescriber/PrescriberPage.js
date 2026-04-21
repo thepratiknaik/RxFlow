@@ -215,27 +215,6 @@ const PrescribersPage = () => {
   return (
     <AppShell title="Prescribers">
       <div className="prescribers-page">
-        <section className="prescribers-hero">
-          <div>
-            <p className="prescribers-eyebrow">Prescriber network</p>
-            <h2>Keep contacts, NPI records, and review recipients accurate.</h2>
-            <p className="prescribers-subtitle">
-              Search the directory fast, verify identities, and manage prescriber
-              records without leaving the workflow.
-            </p>
-          </div>
-          <div className="prescribers-hero-stats">
-            <div>
-              <span>Total prescribers</span>
-              <strong>{prescribers.length}</strong>
-            </div>
-            <div>
-              <span>Selected NPI</span>
-              <strong>{selectedPrescriber?.npi || "None"}</strong>
-            </div>
-          </div>
-        </section>
-
         <div className="prescribers-grid">
           <Card className="prescribers-panel">
             <div className="prescribers-toolbar">

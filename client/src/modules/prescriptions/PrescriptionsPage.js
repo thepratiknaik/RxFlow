@@ -14,13 +14,6 @@ const STATUS_TABS = [
   "Picked Up",
   "Cancelled",
 ];
-const REVIEW_FILTERS = [
-  { id: "all", label: "All" },
-  { id: "sent", label: "Sent" },
-  { id: "pending", label: "Pending" },
-  { id: "approved", label: "Approved" },
-  { id: "rejected", label: "Rejected" },
-];
 
 const INITIAL_FORM = {
   patient_id: "",
@@ -59,29 +52,35 @@ const normalizeStatus = (value) => {
   return "New";
 };
 
-const REVIEW_STATUS_LABELS = {
-  not_sent: "Not Sent",
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-  expired: "Expired",
-  completed: "Completed",
-};
+const formatReviewStatus = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
 
-const normalizeReviewStatus = (value) => {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase();
-
-  if (REVIEW_STATUS_LABELS[normalized]) {
-    return normalized;
+  if (!normalized || normalized === "not_sent") {
+    return "Not Sent";
   }
 
-  return "not_sent";
-};
+  if (normalized === "pending") {
+    return "Pending";
+  }
 
-const formatReviewStatus = (value) =>
-  REVIEW_STATUS_LABELS[normalizeReviewStatus(value)] || "Not Sent";
+  if (normalized === "approved") {
+    return "Approved";
+  }
+
+  if (normalized === "rejected") {
+    return "Rejected";
+  }
+
+  if (normalized === "expired") {
+    return "Expired";
+  }
+
+  if (normalized === "completed") {
+    return "Completed";
+  }
+
+  return "Not Sent";
+};
 
 const toPrescriptionEntry = (item) => {
   const patientName = item?.patient
@@ -149,7 +148,7 @@ const PrescriptionsPage = () => {
   const [formData, setFormData] = React.useState(INITIAL_FORM);
   const [saveLoading, setSaveLoading] = React.useState(false);
   const [reviewLoading, setReviewLoading] = React.useState("");
-  const [reviewFilter, setReviewFilter] = React.useState("all");
+  const [searchQuery, setSearchQuery] = React.useState("");
   const [saveError, setSaveError] = React.useState("");
   const [saveSuccess, setSaveSuccess] = React.useState("");
 
@@ -231,29 +230,28 @@ const PrescriptionsPage = () => {
     };
   }, [formOpen]);
 
-  const matchesReviewFilter = React.useCallback(
-    (item) => {
-      const latestStatus = normalizeReviewStatus(
-        item?.review_summary?.latestStatus,
-      );
-      const hasBeenSent = Boolean(item?.review_summary?.hasBeenSent);
-
-      if (reviewFilter === "all") {
-        return true;
-      }
-
-      if (reviewFilter === "sent") {
-        return hasBeenSent;
-      }
-
-      return latestStatus === reviewFilter;
-    },
-    [reviewFilter],
-  );
-
   const filtered = prescriptions.filter((item) => {
     const matchesStatus = statusTab === "All" || item.status === statusTab;
-    return matchesStatus && matchesReviewFilter(item);
+    const search = searchQuery.trim().toLowerCase();
+
+    if (!search) {
+      return matchesStatus;
+    }
+
+    const haystack = [
+      item.prescription_number,
+      item.patient_name,
+      item.prescriber_id,
+      item.pharmacy_id,
+      item.entered_by,
+      item.verified_by,
+      item.status,
+      ...(item.drug_name || []),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return matchesStatus && haystack.includes(search);
   });
   const selected = prescriptions.find(
     (item) => item.prescription_id === selectedId,
@@ -282,27 +280,6 @@ const PrescriptionsPage = () => {
     [prescriptions],
   );
 
-  const getReviewCount = React.useCallback(
-    (filterId) =>
-      prescriptions.filter((item) => {
-        const latestStatus = normalizeReviewStatus(
-          item?.review_summary?.latestStatus,
-        );
-        const hasBeenSent = Boolean(item?.review_summary?.hasBeenSent);
-
-        if (filterId === "all") {
-          return true;
-        }
-
-        if (filterId === "sent") {
-          return hasBeenSent;
-        }
-
-        return latestStatus === filterId;
-      }).length,
-    [prescriptions],
-  );
-
   const filteredPrescribers = React.useMemo(() => {
     const search = prescriberSearch.trim().toLowerCase();
     if (!search) {
@@ -318,40 +295,6 @@ const PrescriptionsPage = () => {
       );
     });
   }, [prescriberSearch, prescribers]);
-
-  const queueSummary = React.useMemo(
-    () =>
-      prescriptions.reduce(
-        (accumulator, item) => {
-          const status = String(item?.status || "");
-          accumulator.total += 1;
-          accumulator[status] = (accumulator[status] || 0) + 1;
-
-          if (item?.review_summary?.hasBeenSent) {
-            accumulator.sent += 1;
-          }
-
-          const reviewStatus = normalizeReviewStatus(
-            item?.review_summary?.latestStatus,
-          );
-          accumulator[reviewStatus] = (accumulator[reviewStatus] || 0) + 1;
-          return accumulator;
-        },
-        {
-          total: 0,
-          New: 0,
-          "In Process": 0,
-          Ready: 0,
-          "Picked Up": 0,
-          Cancelled: 0,
-          sent: 0,
-          pending: 0,
-          approved: 0,
-          rejected: 0,
-        },
-      ),
-    [prescriptions],
-  );
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
@@ -432,35 +375,6 @@ const PrescriptionsPage = () => {
   return (
     <AppShell title="Prescriptions">
       <div className="prescription-page">
-        <section className="prescription-hero">
-          <div>
-            <p className="prescription-eyebrow">Prescription operations</p>
-            <h2>Monitor queue movement and prescriber review status together.</h2>
-            <p className="prescription-subtitle">
-              Track intake, fulfillment, and review outcomes from a single board
-              built for day-to-day pharmacy flow.
-            </p>
-          </div>
-          <div className="prescription-hero-stats">
-            <div>
-              <span>Total prescriptions</span>
-              <strong>{queueSummary.total}</strong>
-            </div>
-            <div>
-              <span>Sent for review</span>
-              <strong>{queueSummary.sent}</strong>
-            </div>
-            <div>
-              <span>Pending reviews</span>
-              <strong>{queueSummary.pending}</strong>
-            </div>
-            <div>
-              <span>Approved reviews</span>
-              <strong>{queueSummary.approved}</strong>
-            </div>
-          </div>
-        </section>
-
         <div className="prescription-grid">
           <Card>
             <div className="prescription-toolbar">
@@ -491,18 +405,17 @@ const PrescriptionsPage = () => {
               ))}
             </div>
 
-            <div className="prescription-review-filters">
-              {REVIEW_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  className={reviewFilter === filter.id ? "active" : ""}
-                  onClick={() => setReviewFilter(filter.id)}
-                >
-                  <span>{filter.label}</span>
-                  <em>{getReviewCount(filter.id)}</em>
-                </button>
-              ))}
-            </div>
+            <form
+              className="prescription-search"
+              onSubmit={(event) => event.preventDefault()}
+            >
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search by patient, drug, prescriber, Rx #, or status"
+              />
+            </form>
 
             {error ? (
               <div className="prescription-message error">{error}</div>
@@ -537,8 +450,8 @@ const PrescriptionsPage = () => {
                         Qty: {item.quantity ?? "N/A"}
                       </span>
                       <span
-                        className={`prescription-review-pill ${normalizeReviewStatus(
-                          item.review_summary?.latestStatus,
+                        className={`prescription-review-pill ${String(
+                          item.review_summary?.latestStatus || "not_sent",
                         )
                           .toLowerCase()
                           .replace(/\s+/g, "-")}`}
@@ -679,9 +592,11 @@ const PrescriptionsPage = () => {
                                 "Prescriber"}
                             </strong>
                             <span
-                              className={`prescription-review-pill ${normalizeReviewStatus(
-                                entry.status,
-                              )}`}
+                              className={`prescription-review-pill ${String(
+                                entry.status || "not_sent",
+                              )
+                                .toLowerCase()
+                                .replace(/\s+/g, "-")}`}
                             >
                               {formatReviewStatus(entry.status)}
                             </span>
@@ -819,7 +734,7 @@ const PrescriptionsPage = () => {
                     onChange={handleFormChange}
                     required
                   >
-                    {STATUS_TABS.map((status) => (
+                    {STATUS_TABS.filter((status) => status !== "All").map((status) => (
                       <option key={status} value={status}>
                         {status}
                       </option>

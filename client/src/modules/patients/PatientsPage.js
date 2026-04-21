@@ -983,39 +983,9 @@ const PatientsPage = () => {
     }
   };
 
-  const patientsOnPage = patients.length;
-  const selectedPatientName = selectedPatient
-    ? `${selectedPatient.firstName || ""} ${selectedPatient.lastName || ""}`.trim()
-    : "No patient selected";
-
   return (
     <AppShell title="Patients">
       <div className="patients-page">
-        <section className="patients-hero">
-          <div>
-            <p className="patients-eyebrow">Patient command center</p>
-            <h2>Patient records, coverage data, and care details in one place.</h2>
-            <p className="patients-subtitle">
-              Review the directory, update patient profiles, and keep insurance
-              records synchronized without breaking workflow.
-            </p>
-          </div>
-          <div className="patients-hero-metrics">
-            <div>
-              <span>Visible patients</span>
-              <strong>{patientsOnPage}</strong>
-            </div>
-            <div>
-              <span>Total records</span>
-              <strong>{patientsPagination.total || 0}</strong>
-            </div>
-            <div>
-              <span>Selected</span>
-              <strong>{selectedPatientName}</strong>
-            </div>
-          </div>
-        </section>
-
         <div className="patients-grid">
           <Card className="patients-panel patients-list-panel">
             <div className="patients-toolbar">
