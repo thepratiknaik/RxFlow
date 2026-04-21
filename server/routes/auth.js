@@ -5,8 +5,10 @@ import {
   getMe,
   logout,
   resetPassword,
+  listUsers,
+  updateUserRole,
 } from "../controllers/authController.js";
-import { verifyToken } from "../middleware/auth.js";
+import { authorize, verifyToken } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -21,6 +23,13 @@ router.post("/login", login);
 router.post("/reset-password", resetPassword);
 
 // Protected routes
+router.get("/users", verifyToken, authorize(["admin"]), listUsers);
+router.patch(
+  "/users/:id/role",
+  verifyToken,
+  authorize(["admin"]),
+  updateUserRole,
+);
 router.get("/me", verifyToken, getMe);
 router.get("/logout", verifyToken, logout);
 

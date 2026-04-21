@@ -6,6 +6,7 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
   RESET_PASSWORD: "/reset-password",
   PROFILE: "/profile",
+  ADMIN_USERS: "/admin/users",
   PATIENTS: "/patients",
   PRESCRIPTIONS: "/prescriptions",
   INVENTORY: "/inventory",
@@ -98,6 +99,8 @@ export const API_ENDPOINTS = {
       "API_AUTH_RESET_PASSWORD_ENDPOINT",
       "/reset-password",
     ),
+    USERS: normalizePath("/auth/users"),
+    USER_ROLE: (id) => normalizePath(`/auth/users/${id}/role`),
   },
   PROFILE: {
     UPDATE: normalizePath("/profile"),
@@ -117,8 +120,7 @@ export const API_ENDPOINTS = {
     LIST: normalizePath("/prescriptions"),
     FHIR_SYNC: normalizePath("/prescriptions/fhir/sync"),
     DETAIL: (id) => normalizePath(`/prescriptions/${id}`),
-    APPROVE_ET_IN: (id) =>
-      normalizePath(`/prescriptions/${id}/approve-et-in`),
+    APPROVE_ET_IN: (id) => normalizePath(`/prescriptions/${id}/approve-et-in`),
     INSURANCE: (id) => normalizePath(`/prescriptions/${id}/insurance`),
   },
   INVENTORY: {

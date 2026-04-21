@@ -7,6 +7,7 @@ import Avatar from "./Avatar.js";
 const ProfileDropdown = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const isAdmin = String(user?.role || "").toLowerCase() === "admin";
   const [open, setOpen] = React.useState(false);
   const dropdownRef = React.useRef();
 
@@ -24,6 +25,11 @@ const ProfileDropdown = () => {
   const handleViewProfile = () => {
     setOpen(false);
     navigate(ROUTES.PROFILE);
+  };
+
+  const handleManageUsers = () => {
+    setOpen(false);
+    navigate(ROUTES.ADMIN_USERS);
   };
 
   const handleLogout = async () => {
@@ -45,6 +51,7 @@ const ProfileDropdown = () => {
           <p className="dropdown-email">{user?.email}</p>
           <div className="dropdown-divider" />
           <button onClick={handleViewProfile}>View Profile</button>
+          {isAdmin && <button onClick={handleManageUsers}>Manage Users</button>}
           <button onClick={handleLogout}>Logout</button>
         </div>
       )}

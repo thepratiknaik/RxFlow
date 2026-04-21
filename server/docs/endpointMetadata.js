@@ -84,6 +84,29 @@ const endpointMetadata = {
     name: "Current User",
     description: "Returns the authenticated user's profile fields.",
   },
+  "GET /api/auth/users": {
+    name: "List Users",
+    description:
+      "Returns all users in the system, optionally filtered by fullname or email search text.",
+    authRequired: true,
+  },
+  "PATCH /api/auth/users/:id/role": {
+    name: "Update User Role",
+    description:
+      "Updates another user's role. Admins should use a separate account for their own role changes.",
+    authRequired: true,
+    requestBody: {
+      label: "Role update payload",
+      fields: [
+        {
+          name: "role",
+          type: "string",
+          required: true,
+          example: "pharmacist",
+        },
+      ],
+    },
+  },
   "PATCH /api/profile": {
     name: "Update Profile",
     description:

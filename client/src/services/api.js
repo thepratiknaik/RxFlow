@@ -194,6 +194,29 @@ class ApiService {
     });
   }
 
+  async listUsers({ q = "" } = {}) {
+    const params = new URLSearchParams();
+
+    if (String(q).trim()) {
+      params.set("q", String(q).trim());
+    }
+
+    const path = params.toString()
+      ? `${API_ENDPOINTS.AUTH.USERS}?${params.toString()}`
+      : API_ENDPOINTS.AUTH.USERS;
+
+    return await this.request(path, {
+      method: "GET",
+    });
+  }
+
+  async updateUserRole(id, role) {
+    return await this.request(API_ENDPOINTS.AUTH.USER_ROLE(id), {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    });
+  }
+
   async updateProfile(data) {
     return await this.request(API_ENDPOINTS.PROFILE.UPDATE, {
       method: "PATCH",
@@ -218,9 +241,12 @@ class ApiService {
       params.set("search", search.trim());
     }
 
-    return await this.request(`${API_ENDPOINTS.DRUGS.LIST}?${params.toString()}`, {
-      method: "GET",
-    });
+    return await this.request(
+      `${API_ENDPOINTS.DRUGS.LIST}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
   }
 
   async pullDrugs({ searchTerm = "", limit = 25 } = {}) {

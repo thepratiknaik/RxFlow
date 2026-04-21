@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import { Op } from "sequelize";
 
 // Generate JWT Token
 const generateToken = (id, role) => {
@@ -216,6 +217,114 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error resetting password",
+    });
+  }
+};
+
+// @desc    List users
+// @route   GET /api/auth/users
+// @access  Admin
+export const listUsers = async (req, res) => {
+  try {
+    const search = String(req.query.q || "").trim();
+    const where = {};
+
+    if (search) {
+      where[Op.or] = [
+        { fullname: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const users = await User.findAll({
+      where,
+      attributes: [
+        "id",
+        "fullname",
+        "email",
+        "role",
+        "isactive",
+        "lastlogin",
+        "createdat",
+        "updatedat",
+      ],
+      order: [["createdat", "DESC"]],
+    });
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    console.error("List users error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching users",
+    });
+  }
+};
+
+// @desc    Update another user's role
+// @route   PATCH /api/auth/users/:id/role
+// @access  Admin
+export const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role) {
+      return res.status(400).json({
+        success: false,
+        message: "Role is required",
+      });
+    }
+
+    if (!["user", "pharmacist", "admin"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role provided",
+      });
+    }
+
+    if (String(req.user?.id) === String(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Use a separate admin account to change your own role.",
+      });
+    }
+
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User role updated successfully",
+      user: {
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+        isactive: user.isactive,
+        lastlogin: user.lastlogin,
+        createdat: user.createdat,
+        updatedat: user.updatedat,
+      },
+    });
+  } catch (error) {
+    console.error("Update user role error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error updating user role",
     });
   }
 };

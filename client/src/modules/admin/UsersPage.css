@@ -1,0 +1,133 @@
+.users-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.users-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.users-toolbar h3 {
+  margin-bottom: 0.35rem;
+}
+
+.users-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.users-toolbar-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.users-search {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.users-search input,
+.users-table select {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+.users-search button,
+.users-refresh,
+.users-save-btn {
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--teal), var(--accent));
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.8rem 1rem;
+}
+
+.users-save-btn:disabled,
+.users-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.users-message {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: #f4f7fb;
+  color: var(--text-secondary);
+}
+
+.users-message.success {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.users-message.error {
+  background: #fff0f0;
+  color: #b42318;
+}
+
+.users-table-wrap {
+  overflow-x: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.users-table th,
+.users-table td {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.92rem;
+}
+
+.users-table th {
+  background: #f9fbfd;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.users-table td {
+  color: #344054;
+}
+
+.users-status {
+  display: inline-flex;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.users-status.active {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.users-status.inactive {
+  background: #fff0f0;
+  color: #b42318;
+}
+
+@media (max-width: 900px) {
+  .users-search {
+    width: 100%;
+  }
+
+  .users-search input {
+    flex: 1;
+  }
+}
