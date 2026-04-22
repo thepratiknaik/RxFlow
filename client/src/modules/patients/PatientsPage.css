@@ -1,0 +1,350 @@
+.patients-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.patients-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.85fr);
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--medium-gray);
+  background: #ffffff;
+  color: var(--text-dark);
+}
+
+.patients-eyebrow {
+  margin: 0 0 0.45rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.72rem;
+  color: var(--text-light);
+}
+
+.patients-hero h2 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.75rem, 2.8vw, 2.35rem);
+  line-height: 1.08;
+}
+
+.patients-subtitle {
+  margin: 0;
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.patients-hero-metrics {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.patients-hero-metrics div {
+  border-radius: 14px;
+  padding: 1rem;
+  border: 1px solid var(--medium-gray);
+  background: var(--light-gray);
+}
+
+.patients-hero-metrics span {
+  display: block;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.patients-hero-metrics strong {
+  color: var(--text-dark);
+  font-size: 1.05rem;
+}
+
+.patients-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.35fr);
+  gap: 1rem;
+}
+
+.patients-sidepanels {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.patients-panel {
+  border-radius: 16px;
+  border: 1px solid var(--medium-gray);
+  background: #ffffff;
+}
+
+.patients-toolbar,
+.patients-section-header,
+.patients-actions,
+.patients-pagination,
+.patients-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.patients-toolbar {
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.patients-toolbar h3,
+.patients-section-header h3 {
+  margin-bottom: 0.35rem;
+  color: var(--text-dark);
+}
+
+.patients-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.patients-search input,
+.patients-form input,
+.patients-form select,
+.patients-form textarea {
+  width: 100%;
+  padding: 0.82rem 0.95rem;
+  border: 1px solid #cfdae6;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+.patients-search button,
+.patients-primary-btn,
+.patients-secondary-btn,
+.patients-danger-btn,
+.patients-pagination button,
+.patients-modal-close {
+  border: none;
+  border-radius: 12px;
+  padding: 0.78rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patients-primary-btn,
+.patients-search button,
+.patients-pagination button {
+  background: var(--navy);
+  color: #fff;
+}
+
+.patients-secondary-btn,
+.patients-modal-close {
+  background: var(--light-gray);
+  color: var(--dark-gray);
+}
+
+.patients-danger-btn {
+  background: #fee4e2;
+  color: #b42318;
+}
+
+.patients-message {
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: #eef4fb;
+  color: #244160;
+}
+
+.patients-message.error { background: #fff1f2; color: #b42318; }
+.patients-message.success { background: #ecfdf3; color: #027a48; }
+
+.patients-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.patients-list-item {
+  width: 100%;
+  padding: 1rem;
+  text-align: left;
+  border: 1px solid var(--medium-gray);
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.patients-list-item.active {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.18);
+  background: #fcfefe;
+}
+
+.patients-list-item strong,
+.patients-detail-grid strong,
+.patients-insurance-item strong {
+  color: var(--text-dark);
+}
+
+.patients-list-item p,
+.patients-list-item span,
+.patients-detail-grid span,
+.patients-insurance-item span {
+  color: var(--text-light);
+}
+
+.patients-chip {
+  padding: 0.42rem 0.72rem;
+  background: var(--light-gray);
+  color: var(--dark-gray);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.patients-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.patients-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.patients-form label,
+.patients-insurance-item label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--dark-gray);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.patients-form textarea {
+  resize: vertical;
+}
+
+.patients-form-span-2 {
+  grid-column: span 2;
+}
+
+.patients-readonly,
+.patients-detail-grid,
+.patients-insurance-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.patients-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.patients-detail-grid > div,
+.patients-insurance-item {
+  border: 1px solid var(--medium-gray);
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  background: var(--light-gray);
+}
+
+.patients-insurance-item {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.patients-insurance-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.patients-insurance-form {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.patients-insurance-form h4 {
+  margin: 0;
+  color: var(--text-dark);
+}
+
+.patients-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 31, 59, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+.patients-modal {
+  width: min(960px, 100%);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: var(--box-shadow-lg);
+  padding: 1.5rem;
+}
+
+.patients-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.patients-tabs button {
+  border: none;
+  background: var(--light-gray);
+  padding: 0.5rem 0.92rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--dark-gray);
+}
+
+.patients-tabs button.active {
+  background: var(--navy);
+  color: white;
+}
+
+@media (max-width: 1150px) {
+  .patients-hero,
+  .patients-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .patients-search,
+  .patients-form-grid,
+  .patients-detail-grid,
+  .patients-insurance-item,
+  .patients-actions,
+  .patients-pagination,
+  .patients-section-header,
+  .patients-toolbar,
+  .patients-modal-header {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .patients-form-span-2 {
+    grid-column: span 1;
+  }
+}

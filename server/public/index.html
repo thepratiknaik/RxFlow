@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RxFlow API Docs</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+    <link rel="apple-touch-icon" href="/assets/logo.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-logo" src="/assets/logo.png" alt="RxFlow logo" />
+          <div>
+            <p class="eyebrow">RxFlow Backend</p>
+            <h2 id="page-title">API Documentation</h2>
+          </div>
+        </div>
+        <div class="badge-row">
+          <div class="badge">
+            <strong>Base</strong> <code id="base-url"></code>
+            <button
+              type="button"
+              id="copy-base-url"
+              class="badge-copy-button"
+              aria-label="Copy base URL"
+              title="Copy base URL"
+            >
+              Copy
+            </button>
+          </div>
+          <div class="badge">
+            <strong>Security</strong> <code id="auth-badge">Bearer JWT</code>
+          </div>
+          <div class="badge">
+            <strong>Format</strong>
+            <code id="format-badge">application/json</code>
+          </div>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-layout">
+          <div class="hero-copy">
+            <p class="eyebrow">Reference</p>
+            <h1 id="hero-title">Explore and test your API endpoints.</h1>
+            <p id="hero-description">
+              Endpoints are discovered from your backend automatically and
+              rendered below.
+            </p>
+            <div class="hero-metrics" id="hero-metrics"></div>
+          </div>
+
+          <aside class="hero-panel">
+            <p class="eyebrow token-eyebrow">Session</p>
+            <h2>Current Token</h2>
+            <p>
+              Login and register fill this automatically. Protected routes use
+              it as
+              <code id="auth-header-preview"
+                >Authorization: Bearer &lt;jwt-token&gt;</code
+              >.
+            </p>
+
+            <label for="token" class="token-label">JWT token</label>
+            <div class="token-row">
+              <input
+                type="text"
+                id="token"
+                class="token-box"
+                placeholder="Token is auto-filled after login or register"
+                autocomplete="off"
+                spellcheck="false"
+                readonly
+              />
+              <button
+                type="button"
+                id="copy-token"
+                class="copy-icon-button"
+                aria-label="Copy token"
+                title="Copy token"
+              >
+                <span class="sr-only">Copy token</span>
+              </button>
+            </div>
+
+            <div class="hero-actions">
+              <button type="button" class="secondary" id="clear-token">
+                Clear Token
+              </button>
+              <a class="button" href="#reference">Jump To Reference</a>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="reference">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Overview</p>
+            <h2>API Reference Notes</h2>
+          </div>
+          <p>Shared rules used across all routes.</p>
+        </div>
+
+        <div class="doc-grid" id="reference-grid"></div>
+      </section>
+
+      <section class="content">
+        <aside class="section">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Directory</p>
+              <h2>Modules and Endpoints</h2>
+            </div>
+            <p>Generated from server routes.</p>
+          </div>
+
+          <div class="module-list" id="module-list"></div>
+        </aside>
+
+        <section class="section" id="tester">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Details</p>
+              <h2>Route Reference And Tester</h2>
+            </div>
+            <p>Each route includes its docs and a live tester.</p>
+          </div>
+
+          <div class="tester-list" id="tester-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
