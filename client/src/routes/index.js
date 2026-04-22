@@ -7,10 +7,14 @@ import ResetPasswordPage from "../modules/auth/ResetPasswordPage";
 import ProfilePage from "../modules/profile/ProfilePage";
 import PatientsPage from "../modules/patients/PatientsPage";
 import PrescriptionsPage from "../modules/prescriptions/PrescriptionsPage";
+import PrescriberReviewPage from "../modules/prescriptionReview/PrescriberReviewPage";
 import InventoryPage from "../modules/inventory/InventoryPage";
+import PrescriberPage from "../modules/prescriber/PrescriberPage";
 import ProtectedRoute from "../components/ProtectedRoute.js";
+import AdminRoute from "../components/AdminRoute.js";
 import { AuthProvider } from "../context/AuthContext.js";
 import { ROUTES } from "../config/routes.js";
+import UsersPage from "../modules/admin/UsersPage.js";
 
 const AppRoutes = () => {
   return (
@@ -54,10 +58,32 @@ const AppRoutes = () => {
             }
           />
           <Route
+            path={ROUTES.PRESCRIPTION_REVIEW}
+            element={<PrescriberReviewPage />}
+          />
+          <Route
+            path={ROUTES.PRESCRIBER}
+            element={
+              <ProtectedRoute>
+                <PrescriberPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path={ROUTES.INVENTORY}
             element={
               <ProtectedRoute>
                 <InventoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_USERS}
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <UsersPage />
+                </AdminRoute>
               </ProtectedRoute>
             }
           />

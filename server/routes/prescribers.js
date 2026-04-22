@@ -1,40 +1,42 @@
 import express from "express";
 import {
-  createInventoryLot,
-  deleteInventoryLot,
-  listInventoryLots,
-  updateInventoryLot,
-} from "../controllers/inventoryController.js";
+  createPrescriber,
+  deletePrescriber,
+  getPrescriberHistory,
+  listPrescribers,
+  updatePrescriber,
+} from "../controllers/prescriberController.js";
 import { authorize, verifyToken } from "../middleware/auth.js";
 
 const router = express.Router();
 
 export const routeConfig = {
-  basePath: "/api/inventory",
-  module: "Inventory",
+  basePath: "/api/prescribers",
+  module: "Prescribers",
 };
 
-router.get("/lots", verifyToken, listInventoryLots);
+router.get("/", verifyToken, listPrescribers);
+router.get("/:id/history", verifyToken, getPrescriberHistory);
 
 router.post(
-  "/lots",
+  "/",
   verifyToken,
   authorize(["pharmacist", "admin"]),
-  createInventoryLot,
+  createPrescriber,
 );
 
 router.patch(
-  "/lots/:id",
+  "/:id",
   verifyToken,
   authorize(["pharmacist", "admin"]),
-  updateInventoryLot,
+  updatePrescriber,
 );
 
 router.delete(
-  "/lots/:id",
+  "/:id",
   verifyToken,
   authorize(["pharmacist", "admin"]),
-  deleteInventoryLot,
+  deletePrescriber,
 );
 
 export default router;

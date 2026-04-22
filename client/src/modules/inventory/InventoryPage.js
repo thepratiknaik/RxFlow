@@ -7,12 +7,47 @@ import EmptyState from "../../components/EmptyState.js";
 import "./InventoryPage.css";
 import "../dashboard/DashboardPage.css";
 
+const EMPTY_LOT_FORM = {
+  drugId: "",
+  lotNumber: "",
+  expiryDate: "",
+  quantityOnHand: "0",
+  minimumLevel: "10",
+};
+
+const getLotStatus = (lot) => {
+  const expiryValue = lot?.expiryDate ? new Date(`${lot.expiryDate}T00:00:00`) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (expiryValue && !Number.isNaN(expiryValue.getTime())) {
+    if (expiryValue.getTime() < today.getTime()) {
+      return { tone: "expired", label: "Expired" };
+    }
+
+    const daysUntilExpiry = Math.ceil(
+      (expiryValue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (daysUntilExpiry <= 30) {
+      return { tone: "expiring", label: "Expiring soon" };
+    }
+  }
+
+  if (lot?.belowThreshold) {
+    return { tone: "low", label: "Low stock" };
+  }
+
+  return { tone: "ok", label: "Stable" };
+};
+
 const InventoryPage = () => {
   const { user } = useAuth();
   const canPullDrugs = ["admin", "pharmacist"].includes(
     String(user?.role || "").toLowerCase(),
   );
   const canManageLots = canPullDrugs;
+  const canViewAuditLogs = canPullDrugs;
 
   const [lots, setLots] = React.useState([]);
   const [lotsSummary, setLotsSummary] = React.useState({
@@ -22,14 +57,11 @@ const InventoryPage = () => {
   const [lotsLoading, setLotsLoading] = React.useState(true);
   const [lotsError, setLotsError] = React.useState("");
   const [lotsFilterLow, setLotsFilterLow] = React.useState(false);
-  const [lotForm, setLotForm] = React.useState({
-    drugId: "",
-    lotNumber: "",
-    expiryDate: "",
-    quantityOnHand: "0",
-    minimumLevel: "10",
-  });
+  const [selectedLotId, setSelectedLotId] = React.useState("");
+  const [lotForm, setLotForm] = React.useState(EMPTY_LOT_FORM);
+  const [lotFormMode, setLotFormMode] = React.useState("create");
   const [lotSaving, setLotSaving] = React.useState(false);
+  const [lotDeleting, setLotDeleting] = React.useState(false);
   const [lotMessage, setLotMessage] = React.useState({ tone: "", text: "" });
 
   const [drugs, setDrugs] = React.useState([]);
@@ -58,6 +90,25 @@ const InventoryPage = () => {
   const [jobsLoading, setJobsLoading] = React.useState(false);
   const [jobsError, setJobsError] = React.useState("");
 
+  const [auditLogs, setAuditLogs] = React.useState([]);
+
+  const selectedLot = lots.find((lot) => lot.id === selectedLotId) || null;
+
+  const hydrateLotForm = React.useCallback((lot) => {
+    if (!lot) {
+      setLotForm(EMPTY_LOT_FORM);
+      return;
+    }
+
+    setLotForm({
+      drugId: lot.drugId || "",
+      lotNumber: lot.lotNumber || "",
+      expiryDate: lot.expiryDate || "",
+      quantityOnHand: String(lot.quantityOnHand ?? 0),
+      minimumLevel: String(lot.minimumLevel ?? 10),
+    });
+  }, []);
+
   const fetchLots = React.useCallback(async () => {
     setLotsLoading(true);
     setLotsError("");
@@ -69,10 +120,18 @@ const InventoryPage = () => {
         belowThreshold: lotsFilterLow,
       });
 
-      setLots(response?.data || []);
+      const nextLots = response?.data || [];
+      setLots(nextLots);
       setLotsSummary(
         response?.summary || { belowThresholdTotal: 0, totalLotRows: 0 },
       );
+      setSelectedLotId((current) => {
+        if (!nextLots.length) {
+          return "";
+        }
+
+        return nextLots.some((lot) => lot.id === current) ? current : nextLots[0].id;
+      });
     } catch (err) {
       setLotsError(err.message || "Failed to load stock lots.");
       setLots([]);
@@ -107,6 +166,7 @@ const InventoryPage = () => {
       );
     } catch (err) {
       setError(err.message || "Failed to load inventory.");
+      setDrugs([]);
     } finally {
       setLoading(false);
     }
@@ -132,13 +192,42 @@ const InventoryPage = () => {
     }
   }, [canPullDrugs]);
 
+  const fetchAuditLogs = React.useCallback(async () => {
+    if (!canViewAuditLogs) {
+      setAuditLogs([]);
+      return;
+    }
+
+    try {
+      const response = await api.listAuditLogs({
+        page: 1,
+        limit: 6,
+        q: "inventory",
+      });
+      setAuditLogs(response?.data || []);
+    } catch {
+      setAuditLogs([]);
+    }
+  }, [canViewAuditLogs]);
+
   React.useEffect(() => {
     fetchDrugs(pagination.page, searchQuery);
   }, [fetchDrugs, pagination.page, searchQuery]);
 
   React.useEffect(() => {
     fetchJobData();
-  }, [fetchJobData]);
+    fetchAuditLogs();
+  }, [fetchAuditLogs, fetchJobData]);
+
+  React.useEffect(() => {
+    if (!selectedLot) {
+      return;
+    }
+
+    if (lotFormMode === "edit") {
+      hydrateLotForm(selectedLot);
+    }
+  }, [hydrateLotForm, lotFormMode, selectedLot]);
 
   React.useEffect(() => {
     if (!latestJobId || !canPullDrugs) {
@@ -151,8 +240,11 @@ const InventoryPage = () => {
         const state = response?.data?.state;
 
         if (state && !["waiting", "active", "delayed"].includes(state)) {
-          fetchJobData();
-          fetchDrugs(1, searchQuery);
+          await Promise.all([
+            fetchJobData(),
+            fetchDrugs(1, searchQuery),
+            fetchAuditLogs(),
+          ]);
           setLatestJobId("");
         } else {
           fetchJobData();
@@ -163,10 +255,10 @@ const InventoryPage = () => {
     }, 4000);
 
     return () => window.clearInterval(intervalId);
-  }, [canPullDrugs, fetchDrugs, fetchJobData, latestJobId, searchQuery]);
+  }, [canPullDrugs, fetchAuditLogs, fetchDrugs, fetchJobData, latestJobId, searchQuery]);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
     const nextQuery = searchInput.trim();
 
     if (pagination.page === 1 && nextQuery === searchQuery) {
@@ -178,33 +270,55 @@ const InventoryPage = () => {
     setSearchQuery(nextQuery);
   };
 
-  const handleLotFormChange = (e) => {
-    const { name, value } = e.target;
+  const handleLotFormChange = (event) => {
+    const { name, value } = event.target;
     setLotForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleLotSubmit = async (e) => {
-    e.preventDefault();
+  const handleCreateNewLot = () => {
+    setLotFormMode("create");
+    setSelectedLotId("");
+    setLotMessage({ tone: "", text: "" });
+    setLotForm(EMPTY_LOT_FORM);
+  };
+
+  const handleEditSelectedLot = (lot) => {
+    if (!lot) {
+      return;
+    }
+
+    setSelectedLotId(lot.id);
+    setLotFormMode("edit");
+    setLotMessage({ tone: "", text: "" });
+    hydrateLotForm(lot);
+  };
+
+  const handleLotSubmit = async (event) => {
+    event.preventDefault();
     setLotMessage({ tone: "", text: "" });
     setLotSaving(true);
 
+    const payload = {
+      drugId: lotForm.drugId.trim(),
+      lotNumber: lotForm.lotNumber.trim(),
+      expiryDate: lotForm.expiryDate,
+      quantityOnHand: Number(lotForm.quantityOnHand) || 0,
+      minimumLevel: Number(lotForm.minimumLevel) || 10,
+    };
+
     try {
-      await api.createInventoryLot({
-        drugId: lotForm.drugId.trim(),
-        lotNumber: lotForm.lotNumber.trim(),
-        expiryDate: lotForm.expiryDate,
-        quantityOnHand: Number(lotForm.quantityOnHand) || 0,
-        minimumLevel: Number(lotForm.minimumLevel) || 10,
-      });
-      setLotMessage({ tone: "success", text: "Stock lot saved." });
-      setLotForm({
-        drugId: "",
-        lotNumber: "",
-        expiryDate: "",
-        quantityOnHand: "0",
-        minimumLevel: "10",
-      });
-      await fetchLots();
+      if (lotFormMode === "edit" && selectedLotId) {
+        await api.updateInventoryLot(selectedLotId, payload);
+        setLotMessage({ tone: "success", text: "Stock lot updated." });
+      } else {
+        await api.createInventoryLot(payload);
+        setLotMessage({ tone: "success", text: "Stock lot added." });
+      }
+
+      await Promise.all([fetchLots(), fetchAuditLogs()]);
+      setLotFormMode("create");
+      setLotForm(EMPTY_LOT_FORM);
+      setSelectedLotId("");
     } catch (err) {
       setLotMessage({
         tone: "error",
@@ -215,8 +329,41 @@ const InventoryPage = () => {
     }
   };
 
-  const handlePullSubmit = async (e) => {
-    e.preventDefault();
+  const handleDeleteLot = async () => {
+    if (!selectedLotId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this stock lot? This action cannot be undone.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setLotDeleting(true);
+    setLotMessage({ tone: "", text: "" });
+
+    try {
+      await api.deleteInventoryLot(selectedLotId);
+      setLotMessage({ tone: "success", text: "Stock lot deleted." });
+      setLotFormMode("create");
+      setLotForm(EMPTY_LOT_FORM);
+      setSelectedLotId("");
+      await Promise.all([fetchLots(), fetchAuditLogs()]);
+    } catch (err) {
+      setLotMessage({
+        tone: "error",
+        text: err.message || "Could not delete stock lot.",
+      });
+    } finally {
+      setLotDeleting(false);
+    }
+  };
+
+  const handlePullSubmit = async (event) => {
+    event.preventDefault();
     setPullLoading(true);
     setPullError("");
     setPullSuccess("");
@@ -230,7 +377,7 @@ const InventoryPage = () => {
       const jobId = response?.data?.jobId || "";
       setLatestJobId(jobId);
       setPullSuccess(response?.message || "Drug pull job queued successfully.");
-      await fetchJobData();
+      await Promise.all([fetchJobData(), fetchAuditLogs()]);
     } catch (err) {
       setPullError(err.message || "Failed to queue drug pull.");
     } finally {
@@ -242,177 +389,246 @@ const InventoryPage = () => {
 
   return (
     <AppShell title="Inventory">
-      <div className="inventory-page">
-        <Card className="inventory-panel inventory-stock-dashboard">
-          <div className="inventory-toolbar">
-            <div>
-              <h3>Stock by lot</h3>
-              <p className="inventory-subtitle">
-                On-hand quantity, lot number, and expiry. Rows highlight when{" "}
-                <strong>quantity &lt; minimum level</strong> (backend threshold
-                rule).
-              </p>
+      <div className="inventory-page inventory-redesign">
+        <div className="inventory-top-grid">
+          <Card className="inventory-panel inventory-panel-wide inventory-stock-panel">
+            <div className="inventory-toolbar">
+              <div>
+                <h3>Stock lots</h3>
+                <p className="inventory-subtitle">
+                  Select a lot to edit, or start a new lot record for any drug in
+                  the catalog.
+                </p>
+              </div>
+              <div className="inventory-summary">
+                <span>{lots.length} visible</span>
+                <span className="inventory-alert-pill">
+                  {lotsSummary.belowThresholdTotal ?? 0} at risk
+                </span>
+              </div>
             </div>
-            <div className="inventory-summary">
-              <span>{lotsSummary.totalLotRows ?? 0} lot rows</span>
-              <span className="inventory-alert-pill">
-                {lotsSummary.belowThresholdTotal ?? 0} below minimum
-              </span>
-            </div>
-          </div>
 
-          <div className="inventory-lots-toolbar">
-            <label className="inventory-lots-toggle">
-              <input
-                type="checkbox"
-                checked={lotsFilterLow}
-                onChange={(e) => setLotsFilterLow(e.target.checked)}
-              />
-              Show only below minimum
-            </label>
-          </div>
-
-          {lotsError ? (
-            <div className="inventory-message error">{lotsError}</div>
-          ) : null}
-
-          {lotsLoading ? (
-            <div className="inventory-message">Loading stock lots…</div>
-          ) : lots.length === 0 ? (
-            <div className="inventory-empty">
-              <EmptyState
-                title="No stock lots"
-                description="Add lots against drugs from your catalog, or sync drugs first then record receiving."
-              />
-            </div>
-          ) : (
-            <div className="inventory-table-wrap inventory-lots-table-wrap">
-              <table className="inventory-table inventory-lots-table">
-                <thead>
-                  <tr>
-                    <th>Drug</th>
-                    <th>Quantity</th>
-                    <th>Minimum</th>
-                    <th>Lot #</th>
-                    <th>Expiry</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lots.map((lot) => (
-                    <tr
-                      key={lot.id}
-                      className={
-                        lot.belowThreshold ? "inventory-row-low" : undefined
-                      }
-                    >
-                      <td>
-                        <div className="inventory-drug-name">
-                          {lot.drugDisplayName || "—"}
-                        </div>
-                        <div className="inventory-drug-ndc">
-                          {lot.drug?.productndc || ""}
-                        </div>
-                      </td>
-                      <td>{lot.quantityOnHand}</td>
-                      <td>{lot.minimumLevel}</td>
-                      <td className="inventory-mono">{lot.lotNumber}</td>
-                      <td>{lot.expiryDate || "—"}</td>
-                      <td>
-                        {lot.belowThreshold ? (
-                          <span className="inventory-status-badge inventory-status-low">
-                            Low stock
-                          </span>
-                        ) : (
-                          <span className="inventory-status-badge inventory-status-ok">
-                            OK
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {canManageLots ? (
-            <div className="inventory-lot-form-wrap">
-              <h4 className="inventory-lot-form-title">Add / adjust lot</h4>
-              <form className="inventory-lot-form" onSubmit={handleLotSubmit}>
-                <label>
-                  Drug ID (UUID)
-                  <input
-                    name="drugId"
-                    value={lotForm.drugId}
-                    onChange={handleLotFormChange}
-                    placeholder="From drug catalog"
-                    required
-                  />
-                </label>
-                <label>
-                  Lot number
-                  <input
-                    name="lotNumber"
-                    value={lotForm.lotNumber}
-                    onChange={handleLotFormChange}
-                    required
-                  />
-                </label>
-                <label>
-                  Expiry
-                  <input
-                    name="expiryDate"
-                    type="date"
-                    value={lotForm.expiryDate}
-                    onChange={handleLotFormChange}
-                    required
-                  />
-                </label>
-                <label>
-                  Quantity on hand
-                  <input
-                    name="quantityOnHand"
-                    type="number"
-                    min="0"
-                    value={lotForm.quantityOnHand}
-                    onChange={handleLotFormChange}
-                  />
-                </label>
-                <label>
-                  Minimum level
-                  <input
-                    name="minimumLevel"
-                    type="number"
-                    min="0"
-                    value={lotForm.minimumLevel}
-                    onChange={handleLotFormChange}
-                  />
-                </label>
-                <button type="submit" disabled={lotSaving}>
-                  {lotSaving ? "Saving…" : "Save lot"}
-                </button>
-              </form>
-              {lotMessage.text ? (
-                <div
-                  className={`inventory-message ${
-                    lotMessage.tone === "error" ? "error" : "success"
-                  }`}
+            <div className="inventory-lots-toolbar">
+              <label className="inventory-lots-toggle">
+                <input
+                  type="checkbox"
+                  checked={lotsFilterLow}
+                  onChange={(event) => setLotsFilterLow(event.target.checked)}
+                />
+                Show only below minimum
+              </label>
+              {canManageLots ? (
+                <button
+                  type="button"
+                  className="inventory-secondary-action"
+                  onClick={handleCreateNewLot}
                 >
-                  {lotMessage.text}
-                </div>
+                  New lot
+                </button>
               ) : null}
             </div>
-          ) : null}
-        </Card>
+
+            {lotsError ? <div className="inventory-message error">{lotsError}</div> : null}
+
+            {lotsLoading ? (
+              <div className="inventory-message">Loading stock lots...</div>
+            ) : lots.length === 0 ? (
+              <div className="inventory-empty">
+                <EmptyState
+                  title="No stock lots"
+                  description="Sync or search the catalog, then start receiving stock into lots."
+                />
+              </div>
+            ) : (
+              <div className="inventory-table-wrap inventory-lots-table-wrap">
+                <table className="inventory-table inventory-lots-table">
+                  <thead>
+                    <tr>
+                      <th>Drug</th>
+                      <th>Qty</th>
+                      <th>Minimum</th>
+                      <th>Lot #</th>
+                      <th>Expiry</th>
+                      <th>Status</th>
+                      {canManageLots ? <th>Actions</th> : null}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lots.map((lot) => {
+                      const lotStatus = getLotStatus(lot);
+
+                      return (
+                        <tr
+                          key={lot.id}
+                          className={`${lot.belowThreshold ? "inventory-row-low" : ""}${
+                            selectedLotId === lot.id ? " inventory-row-selected" : ""
+                          }`}
+                          onClick={() => setSelectedLotId(lot.id)}
+                        >
+                        <td>
+                          <div className="inventory-drug-name">
+                            {lot.drugDisplayName || "-"}
+                          </div>
+                          <div className="inventory-drug-ndc">
+                            {lot.drug?.productndc || ""}
+                          </div>
+                        </td>
+                        <td>{lot.quantityOnHand}</td>
+                        <td>{lot.minimumLevel}</td>
+                        <td className="inventory-mono">{lot.lotNumber}</td>
+                        <td>{lot.expiryDate || "-"}</td>
+                        <td>
+                          <span
+                            className={`inventory-status-badge inventory-status-${lotStatus.tone}`}
+                          >
+                            {lotStatus.label}
+                          </span>
+                        </td>
+                        {canManageLots ? (
+                          <td>
+                            <button
+                              type="button"
+                              className="inventory-inline-btn"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleEditSelectedLot(lot);
+                              }}
+                            >
+                              Edit
+                            </button>
+                          </td>
+                        ) : null}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <Card className="inventory-panel inventory-lot-editor">
+            <div className="inventory-section-header">
+              <div>
+                <h3>{lotFormMode === "edit" ? "Edit stock lot" : "Add stock lot"}</h3>
+                <span>
+                  {lotFormMode === "edit"
+                    ? "Adjust quantity, lot details, or minimum thresholds."
+                    : "Create a new lot row for a catalog drug."}
+                </span>
+              </div>
+              {lotFormMode === "edit" && selectedLot ? (
+                <button
+                  type="button"
+                  className="inventory-secondary-action"
+                  onClick={handleCreateNewLot}
+                >
+                  Cancel edit
+                </button>
+              ) : null}
+            </div>
+
+            {selectedLot && lotFormMode === "edit" ? (
+              <div className="inventory-selected-lot">
+                <strong>{selectedLot.drugDisplayName || "Selected lot"}</strong>
+                <p>
+                  Lot {selectedLot.lotNumber} | NDC {selectedLot.drug?.productndc || "N/A"}
+                </p>
+              </div>
+            ) : null}
+
+            <form className="inventory-lot-form" onSubmit={handleLotSubmit}>
+              <label>
+                Drug ID
+                <input
+                  name="drugId"
+                  value={lotForm.drugId}
+                  onChange={handleLotFormChange}
+                  placeholder="Use a catalog item below to prefill this"
+                  required
+                />
+              </label>
+              <label>
+                Lot number
+                <input
+                  name="lotNumber"
+                  value={lotForm.lotNumber}
+                  onChange={handleLotFormChange}
+                  required
+                />
+              </label>
+              <label>
+                Expiry date
+                <input
+                  name="expiryDate"
+                  type="date"
+                  value={lotForm.expiryDate}
+                  onChange={handleLotFormChange}
+                  required
+                />
+              </label>
+              <label>
+                Quantity on hand
+                <input
+                  name="quantityOnHand"
+                  type="number"
+                  min="0"
+                  value={lotForm.quantityOnHand}
+                  onChange={handleLotFormChange}
+                />
+              </label>
+              <label>
+                Minimum level
+                <input
+                  name="minimumLevel"
+                  type="number"
+                  min="0"
+                  value={lotForm.minimumLevel}
+                  onChange={handleLotFormChange}
+                />
+              </label>
+
+              <div className="inventory-lot-actions">
+                <button type="submit" disabled={lotSaving || lotDeleting}>
+                  {lotSaving
+                    ? "Saving..."
+                    : lotFormMode === "edit"
+                      ? "Update lot"
+                      : "Create lot"}
+                </button>
+                {lotFormMode === "edit" ? (
+                  <button
+                    type="button"
+                    className="inventory-danger-action"
+                    disabled={lotSaving || lotDeleting}
+                    onClick={handleDeleteLot}
+                  >
+                    {lotDeleting ? "Deleting..." : "Delete lot"}
+                  </button>
+                ) : null}
+              </div>
+            </form>
+
+            {lotMessage.text ? (
+              <div
+                className={`inventory-message ${
+                  lotMessage.tone === "error" ? "error" : "success"
+                }`}
+              >
+                {lotMessage.text}
+              </div>
+            ) : null}
+          </Card>
+        </div>
 
         <div className="inventory-grid">
           <Card className="inventory-panel inventory-panel-wide">
             <div className="inventory-toolbar">
               <div>
-                <h3>Drug Inventory</h3>
+                <h3>Drug catalog</h3>
                 <p className="inventory-subtitle">
-                  Search the synced drug catalog by generic name, brand name, or NDC.
+                  Search by generic name, brand, or NDC and click any row to use
+                  it for a stock lot.
                 </p>
               </div>
               <div className="inventory-summary">
@@ -425,7 +641,7 @@ const InventoryPage = () => {
               <input
                 type="text"
                 value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
+                onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Search generic name, brand name, or NDC"
               />
               <button type="submit">Search</button>
@@ -439,7 +655,7 @@ const InventoryPage = () => {
               <div className="inventory-empty">
                 <EmptyState
                   title="No inventory results"
-                  description="Try a different search term or run a new drug pull if the catalog has not been synced yet."
+                  description="Try another query or queue a fresh pull from the source feed."
                 />
               </div>
             ) : (
@@ -453,7 +669,7 @@ const InventoryPage = () => {
                         <th>NDC</th>
                         <th>Dosage Form</th>
                         <th>Route</th>
-                        <th>Labeler</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -464,7 +680,27 @@ const InventoryPage = () => {
                           <td>{drug.productndc || "N/A"}</td>
                           <td>{drug.dosageform || "N/A"}</td>
                           <td>{drug.route || "N/A"}</td>
-                          <td>{drug.labelername || "N/A"}</td>
+                          <td>
+                            {canManageLots ? (
+                              <button
+                                type="button"
+                                className="inventory-inline-btn"
+                                onClick={() => {
+                                  setLotFormMode("create");
+                                  setSelectedLotId("");
+                                  setLotMessage({ tone: "", text: "" });
+                                  setLotForm((current) => ({
+                                    ...current,
+                                    drugId: drug.id,
+                                  }));
+                                }}
+                              >
+                                Use for lot
+                              </button>
+                            ) : (
+                              "View"
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -506,7 +742,7 @@ const InventoryPage = () => {
 
           <div className="inventory-sidepanels">
             <Card className="inventory-panel">
-              <h3>Catalog Snapshot</h3>
+              <h3>Catalog snapshot</h3>
               <div className="inventory-kpis">
                 <div className="inventory-kpi">
                   <span className="inventory-kpi-label">Current page</span>
@@ -526,21 +762,22 @@ const InventoryPage = () => {
             {canPullDrugs ? (
               <>
                 <Card className="inventory-panel">
-                  <h3>Pull Drug Catalog</h3>
+                  <h3>Pull drug catalog</h3>
                   <p className="inventory-subtitle">
-                    Queue a background job to refresh the drug catalog from the source feed.
+                    Queue a background job to refresh the drug catalog from the
+                    source feed.
                   </p>
 
                   <form className="inventory-pull-form" onSubmit={handlePullSubmit}>
                     <label>
-                      Search Term
+                      Search term
                       <input
                         type="text"
                         value={pullForm.searchTerm}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           setPullForm((current) => ({
                             ...current,
-                            searchTerm: e.target.value,
+                            searchTerm: event.target.value,
                           }))
                         }
                         placeholder="Optional source filter"
@@ -553,22 +790,20 @@ const InventoryPage = () => {
                         min="1"
                         max="100"
                         value={pullForm.limit}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           setPullForm((current) => ({
                             ...current,
-                            limit: e.target.value,
+                            limit: event.target.value,
                           }))
                         }
                       />
                     </label>
                     <button type="submit" disabled={pullLoading}>
-                      {pullLoading ? "Queueing..." : "Queue Pull Job"}
+                      {pullLoading ? "Queueing..." : "Queue pull job"}
                     </button>
                   </form>
 
-                  {pullError ? (
-                    <div className="inventory-message error">{pullError}</div>
-                  ) : null}
+                  {pullError ? <div className="inventory-message error">{pullError}</div> : null}
                   {pullSuccess ? (
                     <div className="inventory-message success">{pullSuccess}</div>
                   ) : null}
@@ -576,7 +811,7 @@ const InventoryPage = () => {
 
                 <Card className="inventory-panel">
                   <div className="inventory-section-header">
-                    <h3>Recent Pull Jobs</h3>
+                    <h3>Recent pull jobs</h3>
                     <span>{jobsSummary.total} tracked</span>
                   </div>
 
@@ -605,12 +840,35 @@ const InventoryPage = () => {
                   )}
                 </Card>
 
+                <Card className="inventory-panel">
+                  <div className="inventory-section-header">
+                    <h3>Inventory audit feed</h3>
+                    <span>Protected</span>
+                  </div>
+
+                  {!auditLogs.length ? (
+                    <div className="inventory-message">
+                      No recent inventory audit events.
+                    </div>
+                  ) : (
+                    <div className="inventory-audit-list">
+                      {auditLogs.map((entry) => (
+                        <div key={entry.id} className="inventory-audit-item">
+                          <strong>{entry.summary}</strong>
+                          <p>
+                            {entry.entityType} | {entry.action}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
               </>
             ) : (
               <Card className="inventory-panel">
                 <EmptyState
                   title="Read-only inventory access"
-                  description="Your role can browse the current drug catalog, but only pharmacists and admins can queue a catalog pull."
+                  description="Your role can browse inventory, but only pharmacists and admins can manage lots and queue pull jobs."
                 />
               </Card>
             )}

@@ -6,6 +6,10 @@ import {
   updatePatient,
   deletePatient,
   getPatientAudits,
+  listPatientInsurances,
+  addPatientInsurance,
+  updatePatientInsurance,
+  deletePatientInsurance,
 } from "../controllers/patientController.js";
 import { authorize, verifyToken } from "../middleware/auth.js";
 
@@ -52,6 +56,39 @@ router.get(
   verifyToken,
   authorize(["pharmacist", "admin"]),
   getPatientAudits,
+);
+
+// List patient insurances
+router.get("/:id/insurances", verifyToken, listPatientInsurances);
+
+// Add insurance to patient
+router.post(
+  "/:id/insurances",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  addPatientInsurance,
+);
+
+// Update patient insurance
+router.patch(
+  "/:id/insurances/:insuranceId",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  updatePatientInsurance,
+);
+router.put(
+  "/:id/insurances/:insuranceId",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  updatePatientInsurance,
+);
+
+// Delete patient insurance
+router.delete(
+  "/:id/insurances/:insuranceId",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  deletePatientInsurance,
 );
 
 export default router;

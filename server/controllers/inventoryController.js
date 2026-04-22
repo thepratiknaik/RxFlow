@@ -6,9 +6,33 @@ import {
   drugDisplayName,
   enrichInventoryLot,
 } from "../services/inventoryService.js";
+import {
+  buildActorContext,
+  writeAuditLog,
+} from "../services/auditLogService.js";
 
 const toLimit = (value, fallback = 50, max = 200) =>
   Math.min(Math.max(Number(value) || fallback, 1), max);
+
+const loadInventoryLot = async (id) =>
+  await InventoryLot.findByPk(id, {
+    include: [
+      {
+        model: Drug,
+        as: "drug",
+        required: true,
+      },
+    ],
+  });
+
+const serializeInventoryLot = (row) => {
+  const plain = row.get({ plain: true });
+  const enriched = enrichInventoryLot(plain);
+  return {
+    ...enriched,
+    drugDisplayName: drugDisplayName(plain.drug),
+  };
+};
 
 export const listInventoryLots = async (req, res) => {
   try {
@@ -47,14 +71,7 @@ export const listInventoryLots = async (req, res) => {
       ],
     });
 
-    const data = rows.map((row) => {
-      const plain = row.get({ plain: true });
-      const enriched = enrichInventoryLot(plain);
-      return {
-        ...enriched,
-        drugDisplayName: drugDisplayName(plain.drug),
-      };
-    });
+    const data = rows.map(serializeInventoryLot);
 
     return res.status(200).json({
       success: true,
@@ -134,19 +151,21 @@ export const createInventoryLot = async (req, res) => {
       minimumLevel: min,
     });
 
-    const withDrug = await InventoryLot.findByPk(lot.id, {
-      include: [{ model: Drug, as: "drug", required: true }],
-    });
+    const withDrug = await loadInventoryLot(lot.id);
+    const serialized = serializeInventoryLot(withDrug);
 
-    const plain = withDrug.get({ plain: true });
-    const enriched = enrichInventoryLot(plain);
+    await writeAuditLog({
+      entityType: "inventory_lot",
+      entityId: lot.id,
+      action: "created",
+      summary: `Created lot ${lot.lotNumber} for ${serialized.drugDisplayName || "inventory item"}.`,
+      metadata: serialized,
+      ...buildActorContext(req),
+    });
 
     return res.status(201).json({
       success: true,
-      data: {
-        ...enriched,
-        drugDisplayName: drugDisplayName(plain.drug),
-      },
+      data: serialized,
     });
   } catch (error) {
     if (error.name === "SequelizeUniqueConstraintError") {
@@ -159,6 +178,132 @@ export const createInventoryLot = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to create inventory lot.",
+    });
+  }
+};
+
+export const updateInventoryLot = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const lot = await loadInventoryLot(id);
+
+    if (!lot) {
+      return res.status(404).json({
+        success: false,
+        message: "Inventory lot not found.",
+      });
+    }
+
+    const updates = {};
+    const { lotNumber, expiryDate, quantityOnHand, minimumLevel } = req.body || {};
+
+    if (lotNumber !== undefined) {
+      updates.lotNumber = String(lotNumber).trim();
+    }
+
+    if (expiryDate !== undefined) {
+      updates.expiryDate = expiryDate ? String(expiryDate).slice(0, 10) : null;
+    }
+
+    if (quantityOnHand !== undefined) {
+      const qty = Number(quantityOnHand);
+      if (!Number.isFinite(qty) || qty < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "quantityOnHand must be a non-negative number.",
+        });
+      }
+      updates.quantityOnHand = qty;
+    }
+
+    if (minimumLevel !== undefined) {
+      const min = Number(minimumLevel);
+      if (!Number.isFinite(min) || min < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "minimumLevel must be a non-negative number.",
+        });
+      }
+      updates.minimumLevel = min;
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Provide at least one of: lotNumber, expiryDate, quantityOnHand, minimumLevel.",
+      });
+    }
+
+    const before = serializeInventoryLot(lot);
+    await lot.update(updates);
+    const updated = await loadInventoryLot(id);
+    const serialized = serializeInventoryLot(updated);
+
+    await writeAuditLog({
+      entityType: "inventory_lot",
+      entityId: updated.id,
+      action: "updated",
+      summary: `Updated lot ${serialized.lotNumber} for ${serialized.drugDisplayName || "inventory item"}.`,
+      metadata: {
+        before,
+        after: serialized,
+      },
+      ...buildActorContext(req),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Inventory lot updated successfully.",
+      data: serialized,
+    });
+  } catch (error) {
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        success: false,
+        message: "A lot with this number already exists for this drug.",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update inventory lot.",
+    });
+  }
+};
+
+export const deleteInventoryLot = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const lot = await loadInventoryLot(id);
+
+    if (!lot) {
+      return res.status(404).json({
+        success: false,
+        message: "Inventory lot not found.",
+      });
+    }
+
+    const serialized = serializeInventoryLot(lot);
+    await lot.destroy();
+
+    await writeAuditLog({
+      entityType: "inventory_lot",
+      entityId: id,
+      action: "deleted",
+      summary: `Deleted lot ${serialized.lotNumber} for ${serialized.drugDisplayName || "inventory item"}.`,
+      metadata: serialized,
+      ...buildActorContext(req),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Inventory lot deleted successfully.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete inventory lot.",
     });
   }
 };

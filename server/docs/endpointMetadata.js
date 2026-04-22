@@ -84,6 +84,29 @@ const endpointMetadata = {
     name: "Current User",
     description: "Returns the authenticated user's profile fields.",
   },
+  "GET /api/auth/users": {
+    name: "List Users",
+    description:
+      "Returns all users in the system, optionally filtered by fullname or email search text.",
+    authRequired: true,
+  },
+  "PATCH /api/auth/users/:id/role": {
+    name: "Update User Role",
+    description:
+      "Updates another user's role. Admins should use a separate account for their own role changes.",
+    authRequired: true,
+    requestBody: {
+      label: "Role update payload",
+      fields: [
+        {
+          name: "role",
+          type: "string",
+          required: true,
+          example: "pharmacist",
+        },
+      ],
+    },
+  },
   "PATCH /api/profile": {
     name: "Update Profile",
     description:
@@ -137,6 +160,47 @@ const endpointMetadata = {
     name: "Logout",
     description:
       "Validates the active token and returns a logout confirmation.",
+  },
+  "GET /api/prescribers": {
+    name: "List Prescribers",
+    description:
+      "Returns paginated prescribers and supports optional search by name, contact, email, or NPI.",
+    authRequired: true,
+  },
+  "POST /api/prescribers": {
+    name: "Create Prescriber",
+    description:
+      "Creates a prescriber record with name, contact, email, and 10-digit NPI.",
+    authRequired: true,
+    requestBody: {
+      label: "Prescriber payload",
+      fields: [
+        {
+          name: "name",
+          type: "string",
+          required: true,
+          example: "Dr. John Smith",
+        },
+        {
+          name: "contact",
+          type: "string",
+          required: true,
+          example: "+1 (555) 123-4567",
+        },
+        {
+          name: "email",
+          type: "string",
+          required: true,
+          example: "john.smith@clinic.com",
+        },
+        {
+          name: "npi",
+          type: "string",
+          required: true,
+          example: "1234567890",
+        },
+      ],
+    },
   },
   "GET /api/drugs": {
     name: "List Drugs",
@@ -404,6 +468,88 @@ const endpointMetadata = {
       "Returns paginated audit history of all operations performed on a patient record including creates, updates, reads, and searches.",
     authRequired: true,
   },
+  "GET /api/patients/:id/insurances": {
+    name: "List Patient Insurances",
+    description:
+      "Returns all insurance records linked to a patient. A patient can have multiple insurance entries.",
+    authRequired: true,
+  },
+  "POST /api/patients/:id/insurances": {
+    name: "Add Patient Insurance",
+    description:
+      "Adds a new insurance record for a patient. Restricted to pharmacist and admin roles.",
+    authRequired: true,
+    requestBody: {
+      label: "Patient insurance payload",
+      fields: [
+        {
+          name: "provider_name",
+          type: "string",
+          required: true,
+          example: "Aetna",
+        },
+        {
+          name: "member_id",
+          type: "string",
+          required: true,
+          example: "M123456789",
+        },
+        {
+          name: "bin_number",
+          type: "string",
+          required: false,
+          example: "012345",
+        },
+        {
+          name: "pcn_number",
+          type: "string",
+          required: false,
+          example: "PCN7890",
+        },
+      ],
+    },
+  },
+  "PATCH /api/patients/:id/insurances/:insuranceId": {
+    name: "Update Patient Insurance",
+    description:
+      "Updates an existing patient insurance record. Restricted to pharmacist and admin roles.",
+    authRequired: true,
+    requestBody: {
+      label: "Patient insurance update payload",
+      fields: [
+        {
+          name: "provider_name",
+          type: "string",
+          required: true,
+          example: "Aetna",
+        },
+        {
+          name: "member_id",
+          type: "string",
+          required: true,
+          example: "M123456789",
+        },
+        {
+          name: "bin_number",
+          type: "string",
+          required: false,
+          example: "012345",
+        },
+        {
+          name: "pcn_number",
+          type: "string",
+          required: false,
+          example: "PCN7890",
+        },
+      ],
+    },
+  },
+  "DELETE /api/patients/:id/insurances/:insuranceId": {
+    name: "Delete Patient Insurance",
+    description:
+      "Deletes a patient insurance record. Restricted to pharmacist and admin roles.",
+    authRequired: true,
+  },
   "GET /api/prescriptions": {
     name: "List Prescriptions",
     description:
@@ -515,6 +661,83 @@ const endpointMetadata = {
         },
       ],
     },
+  },
+  "POST /api/prescriptions/entry": {
+    name: "Create Prescription Entry",
+    description:
+      "Creates a prescription using the entry payload shape with support for multiple drug names. Do not send prescription_id/id or created_at; IDs and creation date are assigned automatically by the database.",
+    authRequired: true,
+    requestBody: {
+      label: "Prescription entry payload",
+      fields: [
+        {
+          name: "pharmacy_id",
+          type: "string",
+          required: false,
+          example: "PHARMACY-DEMO",
+        },
+        {
+          name: "patient_id",
+          type: "string (UUID)",
+          required: true,
+          example: "",
+        },
+        {
+          name: "prescriber_id",
+          type: "string",
+          required: false,
+          example: "PRESC-001",
+        },
+        {
+          name: "drug_name",
+          type: "string[]",
+          required: true,
+          example: ["Amoxicillin 500 mg", "Ibuprofen 200 mg"],
+        },
+        {
+          name: "status",
+          type: "string",
+          required: false,
+          example: "New",
+        },
+        {
+          name: "quantity",
+          type: "number",
+          required: true,
+          example: 30,
+        },
+        {
+          name: "verified_by",
+          type: "string",
+          required: false,
+          example: "",
+        },
+      ],
+    },
+  },
+  "GET /api/prescriptions/review/:token": {
+    name: "Get Prescription Review",
+    description:
+      "Returns the safe prescription details needed for the one-time approval page.",
+    authRequired: false,
+  },
+  "POST /api/prescriptions/review/:token/approve": {
+    name: "Approve Prescription Review",
+    description:
+      "Marks the emailed one-time prescription review as approved and consumes the token.",
+    authRequired: false,
+  },
+  "POST /api/prescriptions/review/:token/reject": {
+    name: "Reject Prescription Review",
+    description:
+      "Marks the emailed one-time prescription review as rejected and consumes the token.",
+    authRequired: false,
+  },
+  "POST /api/prescriptions/:id/send-for-review": {
+    name: "Send Prescription for Review",
+    description:
+      "Creates a one-time review link and sends the prescription review email for prescriptions still in New status.",
+    authRequired: true,
   },
   "POST /api/prescriptions/:id/approve-et-in": {
     name: "Approve ET-In (Pharmacist only)",

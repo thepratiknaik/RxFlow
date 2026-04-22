@@ -35,7 +35,9 @@ const GENDER_OPTIONS = [
 ];
 
 const normalizeGenderValue = (value) => {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
 
   if (!normalized) {
     return "";
@@ -67,15 +69,62 @@ const normalizeGenderValue = (value) => {
 };
 
 const STATE_OPTIONS = [
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DE",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
 ];
 
 const formatPhoneNumber = (value) => {
-  const digits = String(value || "").replace(/\D/g, "").slice(0, 10);
+  const digits = String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 10);
 
   if (digits.length <= 3) {
     return digits;
@@ -135,11 +184,7 @@ const PatientFormFields = ({ formData, onChange }) => {
       </label>
       <label>
         Gender
-        <select
-          name="gender"
-          value={formData.gender}
-          onChange={onChange}
-        >
+        <select name="gender" value={formData.gender} onChange={onChange}>
           {GENDER_OPTIONS.map((option) => (
             <option key={option.value || "empty"} value={option.value}>
               {option.label}
@@ -261,6 +306,224 @@ const PatientFormFields = ({ formData, onChange }) => {
   );
 };
 
+const InsuranceSection = ({
+  selectedPatient,
+  canManagePatients,
+  insuranceList,
+  insuranceLoading,
+  insuranceError,
+  insuranceForm,
+  insuranceSaving,
+  insuranceMessage,
+  insuranceEditingId,
+  insuranceEditForm,
+  insuranceActionId,
+  onInsuranceFormChange,
+  onInsuranceSave,
+  onInsuranceEditStart,
+  onInsuranceEditCancel,
+  onInsuranceEditFormChange,
+  onInsuranceEditSave,
+  onInsuranceDelete,
+}) => {
+  return (
+    <div className="patients-form">
+      {insuranceError ? (
+        <div className="patients-message error">{insuranceError}</div>
+      ) : null}
+
+      {insuranceMessage ? (
+        <div className="patients-message success">{insuranceMessage}</div>
+      ) : null}
+
+      {insuranceLoading ? (
+        <div className="patients-message">Loading insurance records...</div>
+      ) : insuranceList.length === 0 ? (
+        <EmptyState
+          title="No insurance records"
+          description="Add insurance details for this patient."
+        />
+      ) : (
+        <div className="patients-insurance-list">
+          {insuranceList.map((insurance) => (
+            <div
+              key={insurance.insurance_id}
+              className="patients-insurance-item"
+            >
+              {insuranceEditingId === insurance.insurance_id ? (
+                <>
+                  <label>
+                    Provider
+                    <input
+                      type="text"
+                      name="provider_name"
+                      value={insuranceEditForm.provider_name}
+                      onChange={onInsuranceEditFormChange}
+                    />
+                  </label>
+                  <label>
+                    Member ID
+                    <input
+                      type="text"
+                      name="member_id"
+                      value={insuranceEditForm.member_id}
+                      onChange={onInsuranceEditFormChange}
+                    />
+                  </label>
+                  <label>
+                    BIN Number
+                    <input
+                      type="text"
+                      name="bin_number"
+                      value={insuranceEditForm.bin_number}
+                      onChange={onInsuranceEditFormChange}
+                    />
+                  </label>
+                  <label>
+                    PCN Number
+                    <input
+                      type="text"
+                      name="pcn_number"
+                      value={insuranceEditForm.pcn_number}
+                      onChange={onInsuranceEditFormChange}
+                    />
+                  </label>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <span>Provider</span>
+                    <strong>{insurance.provider_name}</strong>
+                  </div>
+                  <div>
+                    <span>Member ID</span>
+                    <strong>{insurance.member_id}</strong>
+                  </div>
+                  <div>
+                    <span>BIN Number</span>
+                    <strong>{insurance.bin_number || "N/A"}</strong>
+                  </div>
+                  <div>
+                    <span>PCN Number</span>
+                    <strong>{insurance.pcn_number || "N/A"}</strong>
+                  </div>
+                </>
+              )}
+
+              {canManagePatients ? (
+                <div className="patients-insurance-actions">
+                  {insuranceEditingId === insurance.insurance_id ? (
+                    <>
+                      <button
+                        type="button"
+                        className="patients-primary-btn"
+                        disabled={insuranceActionId === insurance.insurance_id}
+                        onClick={() =>
+                          onInsuranceEditSave(insurance.insurance_id)
+                        }
+                      >
+                        {insuranceActionId === insurance.insurance_id
+                          ? "Saving..."
+                          : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        className="patients-secondary-btn"
+                        disabled={insuranceActionId === insurance.insurance_id}
+                        onClick={onInsuranceEditCancel}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="patients-secondary-btn"
+                        disabled={insuranceActionId === insurance.insurance_id}
+                        onClick={() => onInsuranceEditStart(insurance)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="patients-danger-btn"
+                        disabled={insuranceActionId === insurance.insurance_id}
+                        onClick={() =>
+                          onInsuranceDelete(insurance.insurance_id)
+                        }
+                      >
+                        {insuranceActionId === insurance.insurance_id
+                          ? "Deleting..."
+                          : "Delete"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {canManagePatients ? (
+        <form className="patients-insurance-form" onSubmit={onInsuranceSave}>
+          <h4>Add Insurance</h4>
+          <div className="patients-form-grid">
+            <label>
+              Provider Name
+              <input
+                type="text"
+                name="provider_name"
+                value={insuranceForm.provider_name}
+                onChange={onInsuranceFormChange}
+                required
+              />
+            </label>
+            <label>
+              Member ID
+              <input
+                type="text"
+                name="member_id"
+                value={insuranceForm.member_id}
+                onChange={onInsuranceFormChange}
+                required
+              />
+            </label>
+            <label>
+              BIN Number
+              <input
+                type="text"
+                name="bin_number"
+                value={insuranceForm.bin_number}
+                onChange={onInsuranceFormChange}
+              />
+            </label>
+            <label>
+              PCN Number
+              <input
+                type="text"
+                name="pcn_number"
+                value={insuranceForm.pcn_number}
+                onChange={onInsuranceFormChange}
+              />
+            </label>
+          </div>
+
+          <div className="patients-actions">
+            <button
+              type="submit"
+              className="patients-primary-btn"
+              disabled={insuranceSaving || !selectedPatient?.id}
+            >
+              {insuranceSaving ? "Saving..." : "Add Insurance"}
+            </button>
+          </div>
+        </form>
+      ) : null}
+    </div>
+  );
+};
 const PatientsPage = () => {
   const { user } = useAuth();
   const canManagePatients = ["admin", "pharmacist"].includes(
@@ -292,6 +555,27 @@ const PatientsPage = () => {
   const [saveSuccess, setSaveSuccess] = React.useState("");
   const [deleteLoading, setDeleteLoading] = React.useState(false);
 
+  const [activeTab, setActiveTab] = React.useState("details");
+  const [insuranceList, setInsuranceList] = React.useState([]);
+  const [insuranceLoading, setInsuranceLoading] = React.useState(false);
+  const [insuranceError, setInsuranceError] = React.useState("");
+  const [insuranceSaving, setInsuranceSaving] = React.useState(false);
+  const [insuranceMessage, setInsuranceMessage] = React.useState("");
+  const [insuranceEditingId, setInsuranceEditingId] = React.useState("");
+  const [insuranceActionId, setInsuranceActionId] = React.useState("");
+  const [insuranceEditForm, setInsuranceEditForm] = React.useState({
+    provider_name: "",
+    member_id: "",
+    bin_number: "",
+    pcn_number: "",
+  });
+  const [insuranceForm, setInsuranceForm] = React.useState({
+    provider_name: "",
+    member_id: "",
+    bin_number: "",
+    pcn_number: "",
+  });
+
   const applyPatientToForm = React.useCallback((patient) => {
     setFormData({
       firstName: patient?.firstName || "",
@@ -312,63 +596,91 @@ const PatientsPage = () => {
     });
   }, []);
 
-  const fetchPatients = React.useCallback(async (page, q) => {
-    setPatientsLoading(true);
-    setPatientsError("");
+  const fetchPatients = React.useCallback(
+    async (page, q) => {
+      setPatientsLoading(true);
+      setPatientsError("");
 
-    try {
-      const response = await api.searchPatients({
-        q,
-        page,
-        limit: 10,
-      });
-
-      const nextPatients = response?.data || [];
-      setPatients(nextPatients);
-      setPatientsPagination(
-        response?.pagination || {
-          page: 1,
+      try {
+        const response = await api.searchPatients({
+          q,
+          page,
           limit: 10,
-          total: 0,
-          totalPages: 1,
-        },
-      );
+        });
 
-      if (!selectedPatientId && nextPatients[0]?.id) {
-        setSelectedPatientId(nextPatients[0].id);
+        const nextPatients = response?.data || [];
+        setPatients(nextPatients);
+        setPatientsPagination(
+          response?.pagination || {
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 1,
+          },
+        );
+
+        if (!selectedPatientId && nextPatients[0]?.id) {
+          setSelectedPatientId(nextPatients[0].id);
+        }
+      } catch (err) {
+        setPatientsError(err.message || "Failed to load patients.");
+      } finally {
+        setPatientsLoading(false);
       }
-    } catch (err) {
-      setPatientsError(err.message || "Failed to load patients.");
-    } finally {
-      setPatientsLoading(false);
-    }
-  }, [selectedPatientId]);
+    },
+    [selectedPatientId],
+  );
 
-  const fetchPatientDetails = React.useCallback(async (patientId) => {
-    if (!patientId) {
-      setSelectedPatient(null);
+  const fetchPatientDetails = React.useCallback(
+    async (patientId) => {
+      if (!patientId) {
+        setSelectedPatient(null);
+        setDetailsError("");
+        return;
+      }
+
+      setDetailsLoading(true);
       setDetailsError("");
+
+      try {
+        const response = await api.getPatient(patientId);
+        const patient = response?.data || null;
+        setSelectedPatient(patient);
+
+        if (patient) {
+          setFormMode("edit");
+          applyPatientToForm(patient);
+        }
+      } catch (err) {
+        setDetailsError(err.message || "Failed to load patient details.");
+      } finally {
+        setDetailsLoading(false);
+      }
+    },
+    [applyPatientToForm],
+  );
+
+  const fetchPatientInsurances = React.useCallback(async (patientId) => {
+    if (!patientId) {
+      setInsuranceList([]);
+      setInsuranceError("");
       return;
     }
 
-    setDetailsLoading(true);
-    setDetailsError("");
+    setInsuranceLoading(true);
+    setInsuranceError("");
 
     try {
-      const response = await api.getPatient(patientId);
-      const patient = response?.data || null;
-      setSelectedPatient(patient);
-
-      if (patient) {
-        setFormMode("edit");
-        applyPatientToForm(patient);
-      }
+      const response = await api.listPatientInsurances(patientId);
+      setInsuranceList(response?.data || []);
+      setInsuranceEditingId("");
     } catch (err) {
-      setDetailsError(err.message || "Failed to load patient details.");
+      setInsuranceError(err.message || "Failed to load patient insurances.");
+      setInsuranceList([]);
     } finally {
-      setDetailsLoading(false);
+      setInsuranceLoading(false);
     }
-  }, [applyPatientToForm]);
+  }, []);
 
   React.useEffect(() => {
     fetchPatients(patientsPagination.page, searchQuery);
@@ -392,6 +704,12 @@ const PatientsPage = () => {
   React.useEffect(() => {
     fetchPatientDetails(selectedPatientId);
   }, [fetchPatientDetails, selectedPatientId]);
+
+  React.useEffect(() => {
+    if (activeTab === "insurance") {
+      fetchPatientInsurances(selectedPatientId);
+    }
+  }, [activeTab, fetchPatientInsurances, selectedPatientId]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -437,6 +755,138 @@ const PatientsPage = () => {
       ...current,
       [name]: nextValue,
     }));
+  };
+
+  const handleInsuranceFormChange = (e) => {
+    const { name, value } = e.target;
+
+    setInsuranceForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const handleInsuranceSave = async (e) => {
+    e.preventDefault();
+
+    if (!selectedPatientId) {
+      return;
+    }
+
+    setInsuranceSaving(true);
+    setInsuranceError("");
+    setInsuranceMessage("");
+
+    try {
+      await api.addPatientInsurance(selectedPatientId, {
+        provider_name: insuranceForm.provider_name,
+        member_id: insuranceForm.member_id,
+        bin_number: insuranceForm.bin_number || null,
+        pcn_number: insuranceForm.pcn_number || null,
+      });
+
+      setInsuranceForm({
+        provider_name: "",
+        member_id: "",
+        bin_number: "",
+        pcn_number: "",
+      });
+      setInsuranceMessage("Insurance added successfully.");
+      await fetchPatientInsurances(selectedPatientId);
+    } catch (err) {
+      setInsuranceError(err.message || "Failed to add insurance.");
+    } finally {
+      setInsuranceSaving(false);
+    }
+  };
+
+  const handleInsuranceEditStart = (insurance) => {
+    setInsuranceEditingId(insurance.insurance_id);
+    setInsuranceEditForm({
+      provider_name: insurance.provider_name || "",
+      member_id: insurance.member_id || "",
+      bin_number: insurance.bin_number || "",
+      pcn_number: insurance.pcn_number || "",
+    });
+    setInsuranceError("");
+    setInsuranceMessage("");
+  };
+
+  const handleInsuranceEditCancel = () => {
+    setInsuranceEditingId("");
+    setInsuranceEditForm({
+      provider_name: "",
+      member_id: "",
+      bin_number: "",
+      pcn_number: "",
+    });
+  };
+
+  const handleInsuranceEditFormChange = (e) => {
+    const { name, value } = e.target;
+    setInsuranceEditForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const handleInsuranceEditSave = async (insuranceId) => {
+    if (!selectedPatientId || !insuranceId) {
+      return;
+    }
+
+    setInsuranceActionId(insuranceId);
+    setInsuranceError("");
+    setInsuranceMessage("");
+
+    try {
+      await api.updatePatientInsurance(selectedPatientId, insuranceId, {
+        provider_name: insuranceEditForm.provider_name,
+        member_id: insuranceEditForm.member_id,
+        bin_number: insuranceEditForm.bin_number || null,
+        pcn_number: insuranceEditForm.pcn_number || null,
+      });
+
+      setInsuranceMessage("Insurance updated successfully.");
+      await fetchPatientInsurances(selectedPatientId);
+      handleInsuranceEditCancel();
+    } catch (err) {
+      setInsuranceError(err.message || "Failed to update insurance.");
+    } finally {
+      setInsuranceActionId("");
+    }
+  };
+
+  const handleInsuranceDelete = async (insuranceId) => {
+    if (!selectedPatientId || !insuranceId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this insurance record? This action cannot be undone.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setInsuranceActionId(insuranceId);
+    setInsuranceError("");
+    setInsuranceMessage("");
+
+    try {
+      await api.deletePatientInsurance(selectedPatientId, insuranceId);
+      setInsuranceMessage("Insurance deleted successfully.");
+      await fetchPatientInsurances(selectedPatientId);
+
+      if (insuranceEditingId === insuranceId) {
+        handleInsuranceEditCancel();
+      }
+    } catch (err) {
+      setInsuranceError(err.message || "Failed to delete insurance.");
+    } finally {
+      setInsuranceActionId("");
+    }
   };
 
   const handlePatientSave = async (e) => {
@@ -648,99 +1098,153 @@ const PatientsPage = () => {
             <Card className="patients-panel">
               <div className="patients-section-header">
                 <h3>Patient Details</h3>
+                <div className="patients-tabs">
+                  <button
+                    className={activeTab === "details" ? "active" : ""}
+                    onClick={() => setActiveTab("details")}
+                  >
+                    Details
+                  </button>
+                  <button
+                    className={activeTab === "insurance" ? "active" : ""}
+                    onClick={() => setActiveTab("insurance")}
+                  >
+                    Insurance
+                  </button>
+                </div>
                 {selectedPatient ? (
                   <span className="patients-chip">
                     {selectedPatient.patientNumber}
                   </span>
                 ) : null}
               </div>
-
-              {detailsError ? (
-                <div className="patients-message error">{detailsError}</div>
-              ) : null}
-              {saveError ? (
-                <div className="patients-message error">{saveError}</div>
-              ) : null}
-              {saveSuccess ? (
-                <div className="patients-message success">{saveSuccess}</div>
-              ) : null}
-
-              {detailsLoading ? (
-                <div className="patients-message">Loading patient details...</div>
-              ) : canManagePatients && selectedPatient ? (
-                <form className="patients-form" onSubmit={handlePatientSave}>
-                  <PatientFormFields
-                    formData={formData}
-                    onChange={handleFormChange}
+              {activeTab === "insurance" ? (
+                selectedPatient ? (
+                  <InsuranceSection
+                    selectedPatient={selectedPatient}
+                    canManagePatients={canManagePatients}
+                    insuranceList={insuranceList}
+                    insuranceLoading={insuranceLoading}
+                    insuranceError={insuranceError}
+                    insuranceForm={insuranceForm}
+                    insuranceSaving={insuranceSaving}
+                    insuranceMessage={insuranceMessage}
+                    insuranceEditingId={insuranceEditingId}
+                    insuranceEditForm={insuranceEditForm}
+                    insuranceActionId={insuranceActionId}
+                    onInsuranceFormChange={handleInsuranceFormChange}
+                    onInsuranceSave={handleInsuranceSave}
+                    onInsuranceEditStart={handleInsuranceEditStart}
+                    onInsuranceEditCancel={handleInsuranceEditCancel}
+                    onInsuranceEditFormChange={handleInsuranceEditFormChange}
+                    onInsuranceEditSave={handleInsuranceEditSave}
+                    onInsuranceDelete={handleInsuranceDelete}
                   />
-
-                  <div className="patients-actions">
-                    <button
-                      type="button"
-                      className="patients-danger-btn"
-                      onClick={handleDeletePatient}
-                      disabled={deleteLoading || saveLoading}
-                    >
-                      {deleteLoading ? "Deleting..." : "Delete Patient"}
-                    </button>
-                    <button
-                      type="submit"
-                      className="patients-primary-btn"
-                      disabled={saveLoading || deleteLoading}
-                    >
-                      {saveLoading
-                        ? "Saving..."
-                        : "Update Patient"}
-                    </button>
-                  </div>
-                </form>
-              ) : canManagePatients ? (
-                <EmptyState
-                  title="No patient selected"
-                  description="Select a patient from the directory to edit details, or use Add Patient to create a new record."
-                />
-              ) : selectedPatient ? (
-                <div className="patients-readonly">
-                  <div className="patients-detail-grid">
-                    <div>
-                      <span>Name</span>
-                      <strong>
-                        {selectedPatient.firstName} {selectedPatient.lastName}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Patient Number</span>
-                      <strong>{selectedPatient.patientNumber}</strong>
-                    </div>
-                    <div>
-                      <span>Phone</span>
-                      <strong>{selectedPatient.phonePrimary}</strong>
-                    </div>
-                    <div>
-                      <span>Email</span>
-                      <strong>{selectedPatient.email || "N/A"}</strong>
-                    </div>
-                    <div>
-                      <span>DOB</span>
-                      <strong>{selectedPatient.dateOfBirth || "N/A"}</strong>
-                    </div>
-                    <div>
-                      <span>Address</span>
-                      <strong>
-                        {selectedPatient.addressLine1}, {selectedPatient.city},{" "}
-                        {selectedPatient.state} {selectedPatient.zipCode}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <EmptyState
+                    title="Select a patient"
+                    description="Choose a patient to view insurance details."
+                  />
+                )
               ) : (
-                <EmptyState
-                  title="Select a patient"
-                  description="Choose a patient from the directory to review their details."
-                />
+                <>
+                  {detailsError ? (
+                    <div className="patients-message error">{detailsError}</div>
+                  ) : null}
+
+                  {saveError ? (
+                    <div className="patients-message error">{saveError}</div>
+                  ) : null}
+                  {saveSuccess ? (
+                    <div className="patients-message success">
+                      {saveSuccess}
+                    </div>
+                  ) : null}
+
+                  {detailsLoading ? (
+                    <div className="patients-message">
+                      Loading patient details...
+                    </div>
+                  ) : canManagePatients && selectedPatient ? (
+                    <form
+                      className="patients-form"
+                      onSubmit={handlePatientSave}
+                    >
+                      <PatientFormFields
+                        formData={formData}
+                        onChange={handleFormChange}
+                      />
+
+                      <div className="patients-actions">
+                        <button
+                          type="button"
+                          className="patients-danger-btn"
+                          onClick={handleDeletePatient}
+                          disabled={deleteLoading || saveLoading}
+                        >
+                          {deleteLoading ? "Deleting..." : "Delete Patient"}
+                        </button>
+                        <button
+                          type="submit"
+                          className="patients-primary-btn"
+                          disabled={saveLoading || deleteLoading}
+                        >
+                          {saveLoading ? "Saving..." : "Update Patient"}
+                        </button>
+                      </div>
+                    </form>
+                  ) : canManagePatients ? (
+                    <EmptyState
+                      title="No patient selected"
+                      description="Select a patient from the directory to edit details, or use Add Patient to create a new record."
+                    />
+                  ) : selectedPatient ? (
+                    <div className="patients-readonly">
+                      <div className="patients-detail-grid">
+                        <div>
+                          <span>Name</span>
+                          <strong>
+                            {selectedPatient.firstName}{" "}
+                            {selectedPatient.lastName}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Patient Number</span>
+                          <strong>{selectedPatient.patientNumber}</strong>
+                        </div>
+                        <div>
+                          <span>Phone</span>
+                          <strong>{selectedPatient.phonePrimary}</strong>
+                        </div>
+                        <div>
+                          <span>Email</span>
+                          <strong>{selectedPatient.email || "N/A"}</strong>
+                        </div>
+                        <div>
+                          <span>DOB</span>
+                          <strong>
+                            {selectedPatient.dateOfBirth || "N/A"}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Address</span>
+                          <strong>
+                            {selectedPatient.addressLine1},{" "}
+                            {selectedPatient.city}, {selectedPatient.state}{" "}
+                            {selectedPatient.zipCode}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="Select a patient"
+                      description="Choose a patient from the directory to review their details."
+                    />
+                  )}
+                </>
               )}
             </Card>
-
           </div>
         </div>
       </div>
@@ -750,10 +1254,7 @@ const PatientsPage = () => {
           className="patients-modal-backdrop"
           onClick={handleCloseCreateModal}
         >
-          <div
-            className="patients-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="patients-modal" onClick={(e) => e.stopPropagation()}>
             <div className="patients-modal-header">
               <div>
                 <h3>Add Patient</h3>

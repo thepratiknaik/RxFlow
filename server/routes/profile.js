@@ -14,5 +14,7 @@ export const routeConfig = {
 
 router.patch("/", verifyToken, updateProfile);
 router.patch("/password", verifyToken, changePassword);
+router.put("/", verifyToken, updateProfile);
+router.put("/password", verifyToken, changePassword);
 
 export default router;

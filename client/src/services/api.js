@@ -53,6 +53,7 @@ class ApiService {
     };
 
     let response;
+    const method = String(options.method || "GET").toUpperCase();
 
     try {
       response = await fetch(url, {
@@ -60,24 +61,49 @@ class ApiService {
         headers,
       });
     } catch (error) {
-      throw new ApiError(
-        "Unable to reach the server. Check that the API is running and the client API URL is configured correctly.",
-        {
-          code: "NETWORK_ERROR",
-          details: error,
-        },
-      );
+      if (method === "PATCH") {
+        try {
+          response = await fetch(url, {
+            ...options,
+            method: "PUT",
+            headers,
+          });
+        } catch (fallbackError) {
+          throw new ApiError(
+            `Unable to reach the server for ${method} ${url}. Browser error: ${fallbackError?.message || "Unknown network error"}`,
+            {
+              code: "NETWORK_ERROR",
+              details: fallbackError,
+            },
+          );
+        }
+      } else {
+        throw new ApiError(
+          `Unable to reach the server for ${method} ${url}. Browser error: ${error?.message || "Unknown network error"}`,
+          {
+            code: "NETWORK_ERROR",
+            details: error,
+          },
+        );
+      }
+    }
+
+    if (!response) {
+      throw new ApiError(`Unable to reach the server for ${method} ${url}.`, {
+        code: "NETWORK_ERROR",
+      });
     }
 
     const { contentType, data, rawBody } = await this.parseResponse(response);
 
-    if (response.ok && !contentType.includes("application/json")) {
+    if (response.ok && contentType.includes("text/html")) {
       throw new ApiError(
         "The client reached an unexpected non-API response. Check the frontend API base URL configuration.",
         {
           status: response.status,
           code: "UNEXPECTED_RESPONSE",
           details: {
+            method: options.method || "GET",
             url,
             contentType,
             preview: rawBody.slice(0, 200),
@@ -194,6 +220,29 @@ class ApiService {
     });
   }
 
+  async listUsers({ q = "" } = {}) {
+    const params = new URLSearchParams();
+
+    if (String(q).trim()) {
+      params.set("q", String(q).trim());
+    }
+
+    const path = params.toString()
+      ? `${API_ENDPOINTS.AUTH.USERS}?${params.toString()}`
+      : API_ENDPOINTS.AUTH.USERS;
+
+    return await this.request(path, {
+      method: "GET",
+    });
+  }
+
+  async updateUserRole(id, role) {
+    return await this.request(API_ENDPOINTS.AUTH.USER_ROLE(id), {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    });
+  }
+
   async updateProfile(data) {
     return await this.request(API_ENDPOINTS.PROFILE.UPDATE, {
       method: "PATCH",
@@ -218,9 +267,12 @@ class ApiService {
       params.set("search", search.trim());
     }
 
-    return await this.request(`${API_ENDPOINTS.DRUGS.LIST}?${params.toString()}`, {
-      method: "GET",
-    });
+    return await this.request(
+      `${API_ENDPOINTS.DRUGS.LIST}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
   }
 
   async pullDrugs({ searchTerm = "", limit = 25 } = {}) {
@@ -296,6 +348,38 @@ class ApiService {
     });
   }
 
+  async listPatientInsurances(patientId) {
+    return await this.request(API_ENDPOINTS.PATIENTS.INSURANCES(patientId), {
+      method: "GET",
+    });
+  }
+
+  async addPatientInsurance(patientId, data) {
+    return await this.request(API_ENDPOINTS.PATIENTS.INSURANCES(patientId), {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePatientInsurance(patientId, insuranceId, data) {
+    return await this.request(
+      API_ENDPOINTS.PATIENTS.INSURANCE_DETAIL(patientId, insuranceId),
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      },
+    );
+  }
+
+  async deletePatientInsurance(patientId, insuranceId) {
+    return await this.request(
+      API_ENDPOINTS.PATIENTS.INSURANCE_DETAIL(patientId, insuranceId),
+      {
+        method: "DELETE",
+      },
+    );
+  }
+
   async listPrescriptions({
     status = "",
     source = "",
@@ -348,6 +432,13 @@ class ApiService {
     });
   }
 
+  async createPrescriptionEntry(data) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.ENTRY, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   async approvePrescriptionEtIn(id) {
     return await this.request(API_ENDPOINTS.PRESCRIPTIONS.APPROVE_ET_IN(id), {
       method: "POST",
@@ -360,6 +451,83 @@ class ApiService {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+  }
+
+  async sendPrescriptionForReview(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.SEND_FOR_REVIEW(id), {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  }
+
+  async listPrescribers({ q = "", page = 1, limit = 100 } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (String(q).trim()) {
+      params.set("q", String(q).trim());
+    }
+
+    return await this.request(
+      `${API_ENDPOINTS.PRESCRIBERS.LIST}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async createPrescriber(data) {
+    return await this.request(API_ENDPOINTS.PRESCRIBERS.LIST, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePrescriber(id, data) {
+    return await this.request(API_ENDPOINTS.PRESCRIBERS.DETAIL(id), {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPrescriberHistory(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIBERS.HISTORY(id), {
+      method: "GET",
+    });
+  }
+
+  async deletePrescriber(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIBERS.DETAIL(id), {
+      method: "DELETE",
+    });
+  }
+
+  async getPrescriptionReview(token) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.REVIEW(token), {
+      method: "GET",
+    });
+  }
+
+  async approvePrescriptionReview(token) {
+    return await this.request(
+      API_ENDPOINTS.PRESCRIPTIONS.REVIEW_APPROVE(token),
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+    );
+  }
+
+  async rejectPrescriptionReview(token) {
+    return await this.request(
+      API_ENDPOINTS.PRESCRIPTIONS.REVIEW_REJECT(token),
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+    );
   }
 
   async listInventoryLots({
@@ -389,6 +557,51 @@ class ApiService {
       method: "POST",
       body: JSON.stringify(data),
     });
+  }
+
+  async updateInventoryLot(id, data) {
+    return await this.request(API_ENDPOINTS.INVENTORY.LOT(id), {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteInventoryLot(id) {
+    return await this.request(API_ENDPOINTS.INVENTORY.LOT(id), {
+      method: "DELETE",
+    });
+  }
+
+  async listAuditLogs({
+    page = 1,
+    limit = 25,
+    entityType = "",
+    action = "",
+    q = "",
+  } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (String(entityType).trim()) {
+      params.set("entityType", String(entityType).trim());
+    }
+
+    if (String(action).trim()) {
+      params.set("action", String(action).trim());
+    }
+
+    if (String(q).trim()) {
+      params.set("q", String(q).trim());
+    }
+
+    return await this.request(
+      `${API_ENDPOINTS.AUDIT_LOGS.LIST}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
   }
 
   getToken() {

@@ -16,8 +16,12 @@ import "./models/Drug.js";
 import "./models/DrugPullAudit.js";
 import "./models/Patient.js";
 import "./models/PatientAudit.js"; // This imports PatientAuditLog
+import "./models/PatientInsurance.js";
 import "./models/Prescription.js";
+import "./models/PrescriptionReviewToken.js";
 import "./models/InventoryLot.js";
+import "./models/Prescriber.js";
+import "./models/AuditLog.js";
 import { startDrugPullWorker } from "./workers/drugPullWorker.js";
 
 const app = express();

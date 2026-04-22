@@ -1,25 +1,87 @@
 .patients-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+}
+
+.patients-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.85fr);
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--medium-gray);
+  background: #ffffff;
+  color: var(--text-dark);
+}
+
+.patients-eyebrow {
+  margin: 0 0 0.45rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.72rem;
+  color: var(--text-light);
+}
+
+.patients-hero h2 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.75rem, 2.8vw, 2.35rem);
+  line-height: 1.08;
+}
+
+.patients-subtitle {
+  margin: 0;
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.patients-hero-metrics {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.patients-hero-metrics div {
+  border-radius: 14px;
+  padding: 1rem;
+  border: 1px solid var(--medium-gray);
+  background: var(--light-gray);
+}
+
+.patients-hero-metrics span {
+  display: block;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.patients-hero-metrics strong {
+  color: var(--text-dark);
+  font-size: 1.05rem;
 }
 
 .patients-grid {
   display: grid;
   grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.35fr);
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .patients-sidepanels {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+}
+
+.patients-panel {
+  border-radius: 16px;
+  border: 1px solid var(--medium-gray);
+  background: #ffffff;
 }
 
 .patients-toolbar,
 .patients-section-header,
 .patients-actions,
-.patients-pagination {
+.patients-pagination,
+.patients-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -34,12 +96,7 @@
 .patients-toolbar h3,
 .patients-section-header h3 {
   margin-bottom: 0.35rem;
-}
-
-.patients-subtitle {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
+  color: var(--text-dark);
 }
 
 .patients-search {
@@ -54,9 +111,9 @@
 .patients-form select,
 .patients-form textarea {
   width: 100%;
-  padding: 0.8rem 0.95rem;
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
+  padding: 0.82rem 0.95rem;
+  border: 1px solid #cfdae6;
+  border-radius: 12px;
   font-size: 0.95rem;
   background: #fff;
 }
@@ -65,24 +122,26 @@
 .patients-primary-btn,
 .patients-secondary-btn,
 .patients-danger-btn,
-.patients-pagination button {
+.patients-pagination button,
+.patients-modal-close {
   border: none;
-  border-radius: 10px;
-  padding: 0.8rem 1rem;
-  font-weight: 600;
+  border-radius: 12px;
+  padding: 0.78rem 1rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .patients-primary-btn,
 .patients-search button,
 .patients-pagination button {
-  background: linear-gradient(135deg, var(--teal), var(--accent));
+  background: var(--navy);
   color: #fff;
 }
 
-.patients-secondary-btn {
-  background: #eef2f7;
-  color: var(--text-primary);
+.patients-secondary-btn,
+.patients-modal-close {
+  background: var(--light-gray);
+  color: var(--dark-gray);
 }
 
 .patients-danger-btn {
@@ -90,30 +149,15 @@
   color: #b42318;
 }
 
-.patients-primary-btn:disabled,
-.patients-danger-btn:disabled,
-.patients-search button:disabled,
-.patients-pagination button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .patients-message {
   padding: 0.85rem 1rem;
-  border-radius: 10px;
-  background: #f4f7fb;
-  color: var(--text-secondary);
+  border-radius: 14px;
+  background: #eef4fb;
+  color: #244160;
 }
 
-.patients-message.error {
-  background: #fff0f0;
-  color: #b42318;
-}
-
-.patients-message.success {
-  background: #ecfdf3;
-  color: #027a48;
-}
+.patients-message.error { background: #fff1f2; color: #b42318; }
+.patients-message.success { background: #ecfdf3; color: #027a48; }
 
 .patients-list {
   display: flex;
@@ -126,9 +170,9 @@
   width: 100%;
   padding: 1rem;
   text-align: left;
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  background: #f9fbfd;
+  border: 1px solid var(--medium-gray);
+  border-radius: 14px;
+  background: #fff;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -137,25 +181,27 @@
 
 .patients-list-item.active {
   border-color: var(--teal);
-  box-shadow: 0 0 0 2px rgba(0, 179, 164, 0.14);
-  background: #f4fffd;
+  box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.18);
+  background: #fcfefe;
 }
 
-.patients-list-item strong {
-  color: var(--text-primary);
+.patients-list-item strong,
+.patients-detail-grid strong,
+.patients-insurance-item strong {
+  color: var(--text-dark);
 }
 
 .patients-list-item p,
-.patients-list-item span {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.88rem;
+.patients-list-item span,
+.patients-detail-grid span,
+.patients-insurance-item span {
+  color: var(--text-light);
 }
 
 .patients-chip {
-  padding: 0.4rem 0.7rem;
-  background: rgba(0, 179, 164, 0.08);
-  color: var(--teal);
+  padding: 0.42rem 0.72rem;
+  background: var(--light-gray);
+  color: var(--dark-gray);
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 700;
@@ -173,10 +219,11 @@
   gap: 0.9rem;
 }
 
-.patients-form label {
+.patients-form label,
+.patients-insurance-item label {
   display: grid;
   gap: 0.4rem;
-  color: var(--text-primary);
+  color: var(--dark-gray);
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -190,31 +237,53 @@
 }
 
 .patients-readonly,
-.patients-detail-grid {
+.patients-detail-grid,
+.patients-insurance-list {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .patients-detail-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.patients-detail-grid span {
-  display: block;
-  margin-bottom: 0.25rem;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
+.patients-detail-grid > div,
+.patients-insurance-item {
+  border: 1px solid var(--medium-gray);
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  background: var(--light-gray);
 }
 
-.patients-detail-grid strong {
-  color: var(--text-primary);
-  font-size: 0.95rem;
+.patients-insurance-item {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.patients-insurance-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.patients-insurance-form {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.patients-insurance-form h4 {
+  margin: 0;
+  color: var(--text-dark);
 }
 
 .patients-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(11, 31, 59, 0.52);
+  background: rgba(11, 31, 59, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,35 +296,34 @@
   max-height: calc(100vh - 3rem);
   overflow-y: auto;
   background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 28px 60px rgba(11, 31, 59, 0.25);
+  border-radius: 16px;
+  box-shadow: var(--box-shadow-lg);
   padding: 1.5rem;
 }
 
-.patients-modal-header {
+.patients-tabs {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
-.patients-modal-header h3 {
-  margin-bottom: 0.35rem;
-  color: var(--text-primary);
-}
-
-.patients-modal-close {
+.patients-tabs button {
   border: none;
-  background: #eef2f7;
-  color: var(--text-primary);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  font-weight: 600;
+  background: var(--light-gray);
+  padding: 0.5rem 0.92rem;
+  border-radius: 999px;
   cursor: pointer;
+  font-weight: 700;
+  color: var(--dark-gray);
+}
+
+.patients-tabs button.active {
+  background: var(--navy);
+  color: white;
 }
 
 @media (max-width: 1150px) {
+  .patients-hero,
   .patients-grid {
     grid-template-columns: 1fr;
   }
@@ -265,9 +333,12 @@
   .patients-search,
   .patients-form-grid,
   .patients-detail-grid,
+  .patients-insurance-item,
   .patients-actions,
   .patients-pagination,
-  .patients-section-header {
+  .patients-section-header,
+  .patients-toolbar,
+  .patients-modal-header {
     grid-template-columns: 1fr;
     flex-direction: column;
     align-items: stretch;
@@ -275,10 +346,5 @@
 
   .patients-form-span-2 {
     grid-column: span 1;
-  }
-
-  .patients-modal-header {
-    flex-direction: column;
-    align-items: stretch;
   }
 }

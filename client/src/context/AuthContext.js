@@ -88,6 +88,14 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
+  const listUsers = async (params = {}) => {
+    return await api.listUsers(params);
+  };
+
+  const updateUserRole = async (id, role) => {
+    return await api.updateUserRole(id, role);
+  };
+
   const value = {
     user,
     loading,
@@ -98,6 +106,8 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     updateProfile,
     changePassword,
+    listUsers,
+    updateUserRole,
   };
 
   return (

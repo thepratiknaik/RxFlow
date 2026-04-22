@@ -24,6 +24,15 @@ JWT_SECRET=your_jwt_secret_key_change_this_in_production_please_use_strong_rando
 JWT_EXPIRE=7d
 NODE_ENV=development
 REDIS_URL=redis://127.0.0.1:6379
+CLIENT_APP_BASE_URL=http://localhost:3000
+PRESCRIPTION_REVIEW_FALLBACK_EMAIL=aditya.srivastava@pace.edu
+PRESCRIPTION_REVIEW_TOKEN_TTL_HOURS=72
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=no-reply@rxlfow.example.com
 ```
 
 3. **Test database connection (optional):**
@@ -114,6 +123,15 @@ For AWS RDS PostgreSQL:
    ```
 
 The server will automatically sync models with the database on startup.
+
+## Prescription Review Email
+
+The "Send for review" flow only sends a real email when SMTP is configured.
+
+- If `SMTP_HOST` is missing, the backend does not send mail. It logs a `[Prescription email stub]` entry in the server console instead.
+- The recipient is the matched prescriber's email when available.
+- If no prescriber email is available, the backend falls back to `PRESCRIPTION_REVIEW_FALLBACK_EMAIL`.
+- `CLIENT_APP_BASE_URL` controls the review link host used in the email body.
 
 ## API Endpoints
 

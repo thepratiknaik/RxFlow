@@ -7,6 +7,10 @@ import {
   getDrugPullJob,
   listDrugPullJobs,
 } from "../queues/drugPullQueue.js";
+import {
+  buildActorContext,
+  writeAuditLog,
+} from "../services/auditLogService.js";
 
 const toLimit = (value, fallback = 25, max = 100) =>
   Math.min(Math.max(Number(value) || fallback, 1), max);
@@ -42,6 +46,20 @@ export const pullDrugs = async (req, res) => {
     await audit.update({ jobid: String(job.id) });
 
     const statusEndpoint = `/api/drugs/pull-jobs/${String(job.id)}`;
+
+    await writeAuditLog({
+      entityType: "drug_pull_job",
+      entityId: audit.id,
+      action: "queued",
+      summary: `Queued drug pull job ${String(job.id)}.`,
+      metadata: {
+        auditId: audit.id,
+        jobId: String(job.id),
+        searchTerm,
+        requestedLimit: limit,
+      },
+      ...buildActorContext(req),
+    });
 
     return res.status(202).json({
       success: true,

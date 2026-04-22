@@ -6,9 +6,12 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
   RESET_PASSWORD: "/reset-password",
   PROFILE: "/profile",
+  ADMIN_USERS: "/admin/users",
   PATIENTS: "/patients",
   PRESCRIPTIONS: "/prescriptions",
+  PRESCRIPTION_REVIEW: "/prescription-review",
   INVENTORY: "/inventory",
+  PRESCRIBER: "/prescriber",
 };
 
 const readEnv = (key) =>
@@ -97,6 +100,8 @@ export const API_ENDPOINTS = {
       "API_AUTH_RESET_PASSWORD_ENDPOINT",
       "/reset-password",
     ),
+    USERS: normalizePath("/auth/users"),
+    USER_ROLE: (id) => normalizePath(`/auth/users/${id}/role`),
   },
   PROFILE: {
     UPDATE: normalizePath("/profile"),
@@ -111,17 +116,36 @@ export const API_ENDPOINTS = {
   PATIENTS: {
     LIST: normalizePath("/patients"),
     DETAIL: (id) => normalizePath(`/patients/${id}`),
+    INSURANCES: (id) => normalizePath(`/patients/${id}/insurances`),
+    INSURANCE_DETAIL: (id, insuranceId) =>
+      normalizePath(`/patients/${id}/insurances/${insuranceId}`),
   },
   PRESCRIPTIONS: {
     LIST: normalizePath("/prescriptions"),
+    ENTRY: normalizePath("/prescriptions/entry"),
     FHIR_SYNC: normalizePath("/prescriptions/fhir/sync"),
     DETAIL: (id) => normalizePath(`/prescriptions/${id}`),
-    APPROVE_ET_IN: (id) =>
-      normalizePath(`/prescriptions/${id}/approve-et-in`),
+    APPROVE_ET_IN: (id) => normalizePath(`/prescriptions/${id}/approve-et-in`),
     INSURANCE: (id) => normalizePath(`/prescriptions/${id}/insurance`),
+    SEND_FOR_REVIEW: (id) =>
+      normalizePath(`/prescriptions/${id}/send-for-review`),
+    REVIEW: (token) => normalizePath(`/prescriptions/review/${token}`),
+    REVIEW_APPROVE: (token) =>
+      normalizePath(`/prescriptions/review/${token}/approve`),
+    REVIEW_REJECT: (token) =>
+      normalizePath(`/prescriptions/review/${token}/reject`),
+  },
+  PRESCRIBERS: {
+    LIST: normalizePath("/prescribers"),
+    DETAIL: (id) => normalizePath(`/prescribers/${id}`),
+    HISTORY: (id) => normalizePath(`/prescribers/${id}/history`),
   },
   INVENTORY: {
     LOTS: normalizePath("/inventory/lots"),
+    LOT: (id) => normalizePath(`/inventory/lots/${id}`),
+  },
+  AUDIT_LOGS: {
+    LIST: normalizePath("/audit-logs"),
   },
 };
 

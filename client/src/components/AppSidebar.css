@@ -1,11 +1,18 @@
 .app-sidebar {
   width: 250px;
-  background: linear-gradient(180deg, var(--navy), #1973D1);
-  color: #ffffff;
+  min-width: 250px;
+  background: #ffffff;
+  color: var(--text-dark);
   padding: 1.8rem 1.4rem;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-md, 0 6px 18px rgba(0, 0, 0, 0.06));
+  align-self: flex-start;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid var(--medium-gray);
+  box-shadow: none;
 }
 
 .brand {
@@ -23,7 +30,7 @@
   border-radius: 16px;
   object-fit: cover;
   flex: 0 0 auto;
-  box-shadow: 0 12px 24px rgba(15, 108, 189, 0.14);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
 
 .app-sidebar-logo {
@@ -45,7 +52,7 @@
   gap: 0.6rem;
   padding: 0.7rem 0.9rem;
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.85);
+  color: #334155;
   font-size: 0.95rem;
   font-weight: 500;
   text-align: left;
@@ -54,15 +61,15 @@
 }
 
 .app-sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  transform: translateX(4px);
+  background: #f8fafc;
+  color: #0f172a;
+  transform: none;
 }
 
 .app-sidebar-link.active {
-  background: linear-gradient(135deg, var(--teal), var(--accent));
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(0, 179, 164, 0.3);
+  background: #eef4fb;
+  color: #0f172a;
+  box-shadow: inset 3px 0 0 var(--teal);
 }
 
 @media (max-width: 900px) {
