@@ -1,0 +1,129 @@
+/* ===========================================
+   GLOBAL STYLES & RESET
+   =========================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* CSS Variables */
+:root {
+  --navy: #1f3654;
+  --navy-light: #355372;
+  --navy-dark: #15253a;
+  --teal: #0f766e;
+  --teal-dark: #0b5c56;
+  --accent: #2563eb;
+  --soft-bg: #f5f7fb;
+  --light-gray: #f8fafc;
+  --medium-gray: #e2e8f0;
+  --dark-gray: #334155;
+  --text-dark: #0f172a;
+  --text-light: #64748b;
+  --text-muted: #94a3b8;
+  --success: #15803d;
+  --border-radius: 12px;
+  --border-radius-lg: 16px;
+  --box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  --box-shadow-md: 0 10px 26px rgba(15, 23, 42, 0.08);
+  --box-shadow-lg: 0 18px 42px rgba(15, 23, 42, 0.1);
+  --box-shadow-hover: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* Body Styles */
+body {
+  font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  color: var(--text-dark);
+  background-color: var(--soft-bg);
+}
+
+/* ===========================================
+   GLOBAL ANIMATIONS
+   =========================================== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 211, 196, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(0, 211, 196, 0.4);
+  }
+}
+
+/* ===========================================
+   UTILITY CLASSES
+   =========================================== */
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.fade-in-down {
+  animation: fadeInDown 0.6s ease-out;
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.6s ease-out;
+}
