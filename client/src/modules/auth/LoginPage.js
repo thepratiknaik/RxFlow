@@ -8,7 +8,7 @@ import AuthFormShell from "../../components/AuthFormShell.js";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, needsOnboarding, login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -18,9 +18,9 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(ROUTES.DASHBOARD);
+      navigate(needsOnboarding ? ROUTES.ONBOARDING : ROUTES.DASHBOARD);
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, needsOnboarding]);
 
   const handleChange = (e) => {
     setFormData({
@@ -38,8 +38,12 @@ const LoginPage = () => {
     try {
       const result = await login(formData.email, formData.password);
       console.log("Login successful:", result);
-      // Redirect to dashboard after successful login
-      navigate(ROUTES.DASHBOARD);
+      const shouldOnboard =
+        String(result?.user?.role || "").toLowerCase() === "admin" &&
+        result?.user?.id &&
+        !localStorage.getItem(`onboarding-complete-${result.user.id}`);
+
+      navigate(shouldOnboard ? ROUTES.ONBOARDING : ROUTES.DASHBOARD);
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");
       console.error("Login error:", err);
@@ -63,56 +67,52 @@ const LoginPage = () => {
           </p>
         }
       >
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="email">Email Address</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                required
-                disabled={loading}
-              />
-            </div>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="email">Email Address</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="you@example.com"
+              required
+              disabled={loading}
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter your password"
-                required
-                disabled={loading}
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Enter your password"
+              required
+              disabled={loading}
+            />
+          </div>
 
-            <div className="form-options">
-              <label className="checkbox-label">
-                <input type="checkbox" disabled={loading} />
-                <span>Remember me</span>
-              </label>
-              {/* <a href="#forgot" className="forgot-link">
+          <div className="form-options">
+            <label className="checkbox-label">
+              <input type="checkbox" disabled={loading} />
+              <span>Remember me</span>
+            </label>
+            {/* <a href="#forgot" className="forgot-link">
                 Forgot password?
               </a> */}
-              <Link to={ROUTES.RESET_PASSWORD} className="forgot-link">
-                Forgot password?
-              </Link>
-            </div>
+            <Link to={ROUTES.RESET_PASSWORD} className="forgot-link">
+              Forgot password?
+            </Link>
+          </div>
 
-            <button
-              type="submit"
-              className="auth-submit-btn"
-              disabled={loading}
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
+          <button type="submit" className="auth-submit-btn" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
       </AuthFormShell>
     </AuthLayout>
   );

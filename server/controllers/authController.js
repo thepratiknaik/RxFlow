@@ -46,6 +46,7 @@ export const register = async (req, res) => {
       fullname,
       email,
       password,
+      role: normalizeRole("admin"),
     });
 
     // Generate token
@@ -330,6 +331,74 @@ export const updateUserRole = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error updating user role",
+    });
+  }
+};
+
+// @desc    Create a new user as admin
+// @route   POST /api/auth/users
+// @access  Admin
+export const createUser = async (req, res) => {
+  try {
+    const { fullname, email, password, confirmPassword, role } = req.body;
+
+    if (!fullname || !email || !password || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required fields",
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match",
+      });
+    }
+
+    const nextRole = normalizeRole(role || "technician");
+
+    if (!["technician", "pharmacist", "admin"].includes(nextRole)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role provided",
+      });
+    }
+
+    const userExists = await User.findOne({ where: { email } });
+    if (userExists) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
+
+    const user = await User.create({
+      fullname,
+      email,
+      password,
+      role: nextRole,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      user: {
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+        isactive: user.isactive,
+        lastlogin: null,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error("Create user error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error creating user",
     });
   }
 };

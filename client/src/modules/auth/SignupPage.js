@@ -8,7 +8,7 @@ import AuthFormShell from "../../components/AuthFormShell.js";
 
 const SignupPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, register } = useAuth();
+  const { isAuthenticated, needsOnboarding, register } = useAuth();
   const [formData, setFormData] = useState({
     fullname: "",
     email: "",
@@ -20,9 +20,9 @@ const SignupPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(ROUTES.DASHBOARD);
+      navigate(needsOnboarding ? ROUTES.ONBOARDING : ROUTES.DASHBOARD);
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, needsOnboarding]);
 
   const handleChange = (e) => {
     setFormData({
@@ -52,8 +52,7 @@ const SignupPage = () => {
         formData.confirmPassword,
       );
       console.log("Signup successful:", result);
-      // Redirect to dashboard after successful signup
-      navigate(ROUTES.DASHBOARD);
+      navigate(ROUTES.ONBOARDING);
     } catch (err) {
       setError(err.message || "Signup failed. Please try again.");
       console.error("Signup error:", err);
@@ -77,85 +76,81 @@ const SignupPage = () => {
           </p>
         }
       >
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="fullname">Full Name</label>
-              <input
-                type="text"
-                id="fullname"
-                name="fullname"
-                value={formData.fullname}
-                onChange={handleChange}
-                placeholder="John Doe"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="email">Email Address</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Create a strong password"
-                required
-                minLength="8"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm your password"
-                required
-                minLength="8"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-options">
-              <label className="checkbox-label">
-                <input type="checkbox" required disabled={loading} />
-                <span>
-                  I agree to the{" "}
-                  <a href="#terms" className="terms-link">
-                    Terms & Conditions
-                  </a>
-                </span>
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              className="auth-submit-btn"
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="fullname">Full Name</label>
+            <input
+              type="text"
+              id="fullname"
+              name="fullname"
+              value={formData.fullname}
+              onChange={handleChange}
+              placeholder="John Doe"
+              required
               disabled={loading}
-            >
-              {loading ? "Creating Account..." : "Create Account"}
-            </button>
-          </form>
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email Address</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="you@example.com"
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Create a strong password"
+              required
+              minLength="8"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Confirm Password</label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="Confirm your password"
+              required
+              minLength="8"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-options">
+            <label className="checkbox-label">
+              <input type="checkbox" required disabled={loading} />
+              <span>
+                I agree to the{" "}
+                <a href="#terms" className="terms-link">
+                  Terms & Conditions
+                </a>
+              </span>
+            </label>
+          </div>
+
+          <button type="submit" className="auth-submit-btn" disabled={loading}>
+            {loading ? "Creating Account..." : "Create Account"}
+          </button>
+        </form>
       </AuthFormShell>
     </AuthLayout>
   );

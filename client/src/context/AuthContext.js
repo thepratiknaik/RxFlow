@@ -3,6 +3,8 @@ import api from "../services/api.js";
 
 const AuthContext = createContext();
 
+const getOnboardingKey = (userId) => `onboarding-complete-${userId}`;
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -15,6 +17,17 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+
+  const resolveOnboardingState = React.useCallback((nextUser) => {
+    const normalizedRole = String(nextUser?.role || "").toLowerCase();
+    const shouldOnboard =
+      normalizedRole === "admin" &&
+      !!nextUser?.id &&
+      !localStorage.getItem(getOnboardingKey(nextUser.id));
+
+    setNeedsOnboarding(shouldOnboard);
+  }, []);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -24,26 +37,30 @@ export const AuthProvider = ({ children }) => {
         if (currentUser) {
           setUser(currentUser);
           setIsAuthenticated(true);
+          resolveOnboardingState(currentUser);
         } else {
           setUser(null);
           setIsAuthenticated(false);
+          setNeedsOnboarding(false);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
         setUser(null);
         setIsAuthenticated(false);
+        setNeedsOnboarding(false);
       }
 
       setLoading(false);
     };
 
     checkAuth();
-  }, []);
+  }, [resolveOnboardingState]);
 
   const login = async (email, password) => {
     const result = await api.login(email, password);
     setUser(result.user);
     setIsAuthenticated(true);
+    resolveOnboardingState(result.user);
     return result;
   };
 
@@ -56,6 +73,7 @@ export const AuthProvider = ({ children }) => {
     );
     setUser(result.user);
     setIsAuthenticated(true);
+    resolveOnboardingState(result.user);
     return result;
   };
 
@@ -63,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     await api.logout();
     setUser(null);
     setIsAuthenticated(false);
+    setNeedsOnboarding(false);
   };
 
   const resetPassword = async (email, newPassword) => {
@@ -96,10 +115,24 @@ export const AuthProvider = ({ children }) => {
     return await api.updateUserRole(id, role);
   };
 
+  const createUser = async (data) => {
+    return await api.createUser(data);
+  };
+
+  const completeOnboarding = () => {
+    if (!user?.id) {
+      return;
+    }
+
+    localStorage.setItem(getOnboardingKey(user.id), "1");
+    setNeedsOnboarding(false);
+  };
+
   const value = {
     user,
     loading,
     isAuthenticated,
+    needsOnboarding,
     login,
     register,
     logout,
@@ -107,7 +140,9 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     changePassword,
     listUsers,
+    createUser,
     updateUserRole,
+    completeOnboarding,
   };
 
   return (

@@ -236,6 +236,19 @@ class ApiService {
     });
   }
 
+  async createUser({ fullname, email, password, confirmPassword, role }) {
+    return await this.request(API_ENDPOINTS.AUTH.CREATE_USER, {
+      method: "POST",
+      body: JSON.stringify({
+        fullname,
+        email,
+        password,
+        confirmPassword,
+        role,
+      }),
+    });
+  }
+
   async updateUserRole(id, role) {
     return await this.request(API_ENDPOINTS.AUTH.USER_ROLE(id), {
       method: "PATCH",

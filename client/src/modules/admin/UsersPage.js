@@ -17,7 +17,7 @@ const formatDate = (value) => {
 };
 
 const UsersPage = () => {
-  const { user, listUsers, updateUserRole } = useAuth();
+  const { user, listUsers, createUser, updateUserRole } = useAuth();
   const [searchInput, setSearchInput] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [users, setUsers] = React.useState([]);
@@ -26,6 +26,14 @@ const UsersPage = () => {
   const [savingId, setSavingId] = React.useState("");
   const [message, setMessage] = React.useState({ tone: "", text: "" });
   const [pendingRoles, setPendingRoles] = React.useState({});
+  const [creatingUser, setCreatingUser] = React.useState(false);
+  const [newUser, setNewUser] = React.useState({
+    fullname: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "technician",
+  });
 
   const fetchUsers = React.useCallback(
     async (query = "") => {
@@ -112,6 +120,51 @@ const UsersPage = () => {
     }
   };
 
+  const handleNewUserFieldChange = (field, value) => {
+    setNewUser((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleCreateUser = async (event) => {
+    event.preventDefault();
+
+    if (newUser.password !== newUser.confirmPassword) {
+      setMessage({
+        tone: "error",
+        text: "New user passwords do not match.",
+      });
+      return;
+    }
+
+    setCreatingUser(true);
+    setMessage({ tone: "", text: "" });
+
+    try {
+      await createUser(newUser);
+      setNewUser({
+        fullname: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        role: "technician",
+      });
+      setMessage({
+        tone: "success",
+        text: "User created successfully.",
+      });
+      fetchUsers(searchQuery);
+    } catch (err) {
+      setMessage({
+        tone: "error",
+        text: err.message || "Failed to create user.",
+      });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   return (
     <AppShell title="User Management">
       <div className="users-page">
@@ -149,6 +202,72 @@ const UsersPage = () => {
         ) : null}
 
         {error ? <div className="users-message error">{error}</div> : null}
+
+        <Card className="users-create-card">
+          <h3>Add new user</h3>
+          <p className="users-subtitle">
+            Create team accounts directly from admin user management.
+          </p>
+          <form className="users-create-form" onSubmit={handleCreateUser}>
+            <input
+              value={newUser.fullname}
+              onChange={(event) =>
+                handleNewUserFieldChange("fullname", event.target.value)
+              }
+              placeholder="Full name"
+              required
+              disabled={creatingUser}
+            />
+            <input
+              type="email"
+              value={newUser.email}
+              onChange={(event) =>
+                handleNewUserFieldChange("email", event.target.value)
+              }
+              placeholder="Email"
+              required
+              disabled={creatingUser}
+            />
+            <select
+              value={newUser.role}
+              onChange={(event) =>
+                handleNewUserFieldChange("role", event.target.value)
+              }
+              disabled={creatingUser}
+            >
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+            <input
+              type="password"
+              value={newUser.password}
+              onChange={(event) =>
+                handleNewUserFieldChange("password", event.target.value)
+              }
+              placeholder="Temporary password"
+              required
+              minLength={8}
+              disabled={creatingUser}
+            />
+            <input
+              type="password"
+              value={newUser.confirmPassword}
+              onChange={(event) =>
+                handleNewUserFieldChange("confirmPassword", event.target.value)
+              }
+              placeholder="Confirm password"
+              required
+              minLength={8}
+              disabled={creatingUser}
+            />
+            <button type="submit" disabled={creatingUser}>
+              {creatingUser ? "Creating..." : "Create user"}
+            </button>
+          </form>
+        </Card>
 
         <Card className="users-table-card">
           {loading ? (

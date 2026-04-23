@@ -3,6 +3,7 @@ export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
   SIGNUP: "/signup",
+  ONBOARDING: "/onboarding",
   DASHBOARD: "/dashboard",
   RESET_PASSWORD: "/reset-password",
   PROFILE: "/profile",
@@ -101,6 +102,7 @@ export const API_ENDPOINTS = {
       "/reset-password",
     ),
     USERS: normalizePath("/auth/users"),
+    CREATE_USER: normalizePath("/auth/users"),
     USER_ROLE: (id) => normalizePath(`/auth/users/${id}/role`),
   },
   PROFILE: {

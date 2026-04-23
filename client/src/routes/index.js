@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import WebsitePage from "../modules/website/WebsitePage";
 import LoginPage from "../modules/auth/LoginPage";
 import SignupPage from "../modules/auth/SignupPage";
+import OnboardingPage from "../modules/auth/OnboardingPage";
 import DashboardPage from "../modules/dashboard/DashboardPage";
 import ResetPasswordPage from "../modules/auth/ResetPasswordPage";
 import ProfilePage from "../modules/profile/ProfilePage";
@@ -24,6 +25,16 @@ const AppRoutes = () => {
           <Route path={ROUTES.HOME} element={<WebsitePage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
+          <Route
+            path={ROUTES.ONBOARDING}
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <OnboardingPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
           <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
           <Route
             path={ROUTES.PROFILE}
