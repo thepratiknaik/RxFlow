@@ -17,7 +17,7 @@
 
 .users-subtitle {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--text-light);
 }
 
 .users-toolbar-actions {
@@ -37,8 +37,8 @@
 .users-create-form input,
 .users-create-form select {
   padding: 0.75rem 0.9rem;
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
+  border: 1px solid var(--medium-gray);
+  border-radius: 12px;
   background: #fff;
   font-size: 0.95rem;
 }
@@ -47,10 +47,10 @@
 .users-refresh,
 .users-save-btn {
   border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--teal), var(--accent));
+  border-radius: 12px;
+  background: var(--navy);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   padding: 0.8rem 1rem;
 }
@@ -74,10 +74,10 @@
 
 .users-create-form button {
   border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--teal), var(--accent));
+  border-radius: 12px;
+  background: var(--navy);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   padding: 0.8rem 1rem;
 }
@@ -89,9 +89,9 @@
 
 .users-message {
   padding: 0.85rem 1rem;
-  border-radius: 10px;
-  background: #f4f7fb;
-  color: var(--text-secondary);
+  border-radius: 14px;
+  background: #eef4fb;
+  color: #244160;
 }
 
 .users-message.success {
@@ -118,13 +118,13 @@
 .users-table td {
   padding: 0.9rem 1rem;
   text-align: left;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--medium-gray);
   font-size: 0.92rem;
 }
 
 .users-table th {
-  background: #f9fbfd;
-  color: var(--text-primary);
+  background: #f8fafc;
+  color: var(--text-dark);
   font-weight: 700;
 }
 

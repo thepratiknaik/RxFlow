@@ -14,6 +14,7 @@ import { buildApiDocs } from "./docs/apiDocs.js";
 import "./models/User.js";
 import "./models/Drug.js";
 import "./models/Patient.js";
+import "./models/Pharmacy.js";
 import "./models/PatientInsurance.js";
 import "./models/Prescription.js";
 import "./models/InventoryLot.js";

@@ -270,6 +270,26 @@ class ApiService {
     });
   }
 
+  async getPharmacy() {
+    return await this.request(API_ENDPOINTS.PHARMACY.DETAIL, {
+      method: "GET",
+    });
+  }
+
+  async updatePharmacy(data) {
+    return await this.request(API_ENDPOINTS.PHARMACY.UPDATE, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async setupPharmacy(data) {
+    return await this.request(API_ENDPOINTS.PHARMACY.SETUP, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   async listDrugs({ page = 1, limit = 20, search = "" } = {}) {
     const params = new URLSearchParams({
       page: String(page),

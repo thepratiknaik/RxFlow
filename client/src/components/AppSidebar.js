@@ -26,9 +26,11 @@ const AppSidebar = () => {
 
   return (
     <aside className="app-sidebar">
-      {/* <h2 className="app-sidebar-logo">RxFlow</h2> */}
       <div className="brand">
         <img className="brand-logo" src={logo} alt="RxFlow logo" />
+        <div className="brand-meta">
+          <span className="brand-title">Pharmacy Logo</span>
+        </div>
       </div>
       <nav className="app-sidebar-nav" aria-label="Application">
         {navItems.map((item) => (

@@ -109,6 +109,11 @@ export const API_ENDPOINTS = {
     UPDATE: normalizePath("/profile"),
     CHANGE_PASSWORD: normalizePath("/profile/password"),
   },
+  PHARMACY: {
+    DETAIL: normalizePath("/pharmacy"),
+    UPDATE: normalizePath("/pharmacy"),
+    SETUP: normalizePath("/pharmacy/setup"),
+  },
   DRUGS: {
     LIST: normalizePath("/drugs"),
     PULL: normalizePath("/drugs/pull"),

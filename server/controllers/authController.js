@@ -62,6 +62,7 @@ export const register = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
       },
     });
@@ -130,6 +131,7 @@ export const login = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
       },
     });
@@ -156,6 +158,7 @@ export const getMe = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
         lastlogin: null,
         created_at: user.created_at,
@@ -224,12 +227,19 @@ export const resetPassword = async (req, res) => {
 // @access  Admin
 export const listUsers = async (req, res) => {
   try {
+    const actor = await User.findByPk(req.user.id);
+    if (!actor) {
+      return res.status(404).json({
+        success: false,
+        message: "Requesting user not found.",
+      });
+    }
+
     const search = String(req.query.q || "").trim();
-    const where = {};
+    const where = { pharmacyId: actor.pharmacyId };
 
     if (search) {
       where[Op.or] = [
-        { fullname: { [Op.iLike]: `%${search}%` } },
         { email: { [Op.iLike]: `%${search}%` } },
       ];
     }
@@ -256,6 +266,7 @@ export const listUsers = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
         lastlogin: null,
         created_at: user.created_at,
@@ -320,6 +331,7 @@ export const updateUserRole = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
         lastlogin: null,
         created_at: user.created_at,
@@ -373,11 +385,20 @@ export const createUser = async (req, res) => {
       });
     }
 
+    const actor = await User.findByPk(req.user.id);
+    if (!actor) {
+      return res.status(404).json({
+        success: false,
+        message: "Requesting user not found.",
+      });
+    }
+
     const user = await User.create({
       fullname,
       email,
       password,
       role: nextRole,
+      pharmacyId: actor.pharmacyId,
     });
 
     res.status(201).json({
@@ -388,6 +409,7 @@ export const createUser = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
         lastlogin: null,
         created_at: user.created_at,

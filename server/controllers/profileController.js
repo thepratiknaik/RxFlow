@@ -46,6 +46,7 @@ export const updateProfile = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
         lastlogin: user.lastlogin,
         created_at: user.created_at,
