@@ -10,6 +10,7 @@ import PrescriptionsPage from "../modules/prescriptions/PrescriptionsPage";
 import PrescriberReviewPage from "../modules/prescriptionReview/PrescriberReviewPage";
 import InventoryPage from "../modules/inventory/InventoryPage";
 import PrescriberPage from "../modules/prescriber/PrescriberPage";
+import BillingPage from "../modules/billing/BillingPage";
 import ProtectedRoute from "../components/ProtectedRoute.js";
 import AdminRoute from "../components/AdminRoute.js";
 import { AuthProvider } from "../context/AuthContext.js";
@@ -84,6 +85,14 @@ const AppRoutes = () => {
                 <AdminRoute>
                   <UsersPage />
                 </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.BILLING}
+            element={
+              <ProtectedRoute>
+                <BillingPage />
               </ProtectedRoute>
             }
           />

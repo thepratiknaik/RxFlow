@@ -63,6 +63,10 @@ const InventoryPage = () => {
   const [lotSaving, setLotSaving] = React.useState(false);
   const [lotDeleting, setLotDeleting] = React.useState(false);
   const [lotMessage, setLotMessage] = React.useState({ tone: "", text: "" });
+  const [traceabilityQuery, setTraceabilityQuery] = React.useState("");
+  const [traceabilityLoading, setTraceabilityLoading] = React.useState(false);
+  const [traceabilityError, setTraceabilityError] = React.useState("");
+  const [traceabilityResult, setTraceabilityResult] = React.useState(null);
 
   const [drugs, setDrugs] = React.useState([]);
   const [pagination, setPagination] = React.useState({
@@ -382,6 +386,28 @@ const InventoryPage = () => {
       setPullError(err.message || "Failed to queue drug pull.");
     } finally {
       setPullLoading(false);
+    }
+  };
+
+  const handleTraceabilitySearch = async (event) => {
+    event.preventDefault();
+    const query = traceabilityQuery.trim();
+    if (!query) {
+      setTraceabilityError("Enter a lot number to search.");
+      setTraceabilityResult(null);
+      return;
+    }
+
+    setTraceabilityLoading(true);
+    setTraceabilityError("");
+    try {
+      const response = await api.getLotTraceability(query);
+      setTraceabilityResult(response?.data || null);
+    } catch (err) {
+      setTraceabilityError(err.message || "Failed to load lot traceability.");
+      setTraceabilityResult(null);
+    } finally {
+      setTraceabilityLoading(false);
     }
   };
 
@@ -806,6 +832,52 @@ const InventoryPage = () => {
                   {pullError ? <div className="inventory-message error">{pullError}</div> : null}
                   {pullSuccess ? (
                     <div className="inventory-message success">{pullSuccess}</div>
+                  ) : null}
+                </Card>
+
+                <Card className="inventory-panel">
+                  <h3>Lot traceability</h3>
+                  <p className="inventory-subtitle">
+                    Search a lot number to trace stocked inventory and dispensed
+                    prescriptions for recall investigations.
+                  </p>
+                  <form
+                    className="inventory-pull-form"
+                    onSubmit={handleTraceabilitySearch}
+                  >
+                    <label>
+                      Lot number
+                      <input
+                        type="text"
+                        value={traceabilityQuery}
+                        onChange={(event) => setTraceabilityQuery(event.target.value)}
+                        placeholder="e.g. LOT-2026-A1"
+                      />
+                    </label>
+                    <button type="submit" disabled={traceabilityLoading}>
+                      {traceabilityLoading ? "Searching..." : "Trace lot"}
+                    </button>
+                  </form>
+                  {traceabilityError ? (
+                    <div className="inventory-message error">{traceabilityError}</div>
+                  ) : null}
+                  {traceabilityResult ? (
+                    <div className="inventory-audit-list">
+                      <div className="inventory-audit-item">
+                        <strong>Stocked lots</strong>
+                        <p>
+                          {traceabilityResult.stockedLots?.length || 0} record(s)
+                          matched
+                        </p>
+                      </div>
+                      <div className="inventory-audit-item">
+                        <strong>Dispensed prescriptions</strong>
+                        <p>
+                          {traceabilityResult.dispensedPrescriptions?.length || 0}{" "}
+                          dispense event(s) matched
+                        </p>
+                      </div>
+                    </div>
                   ) : null}
                 </Card>
 

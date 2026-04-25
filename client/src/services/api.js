@@ -446,6 +446,20 @@ class ApiService {
     });
   }
 
+  async dispensePrescription(id, data) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.DISPENSE(id), {
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    });
+  }
+
+  async completePrescriptionPickup(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.COMPLETE_PICKUP(id), {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  }
+
   async patchPrescriptionInsurance(id, data) {
     return await this.request(API_ENDPOINTS.PRESCRIPTIONS.INSURANCE(id), {
       method: "PATCH",
@@ -572,6 +586,19 @@ class ApiService {
     });
   }
 
+  async getLotTraceability(lotNumber) {
+    const params = new URLSearchParams({
+      lotNumber: String(lotNumber || "").trim(),
+    });
+
+    return await this.request(
+      `${API_ENDPOINTS.INVENTORY.LOT_TRACEABILITY}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
   async listAuditLogs({
     page = 1,
     limit = 25,
@@ -602,6 +629,31 @@ class ApiService {
         method: "GET",
       },
     );
+  }
+
+  async listSubscriptionInvoices({ page = 1, limit = 25, pharmacyId = "" } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (String(pharmacyId).trim()) {
+      params.set("pharmacyId", String(pharmacyId).trim());
+    }
+
+    return await this.request(
+      `${API_ENDPOINTS.BILLING.SUBSCRIPTION_INVOICES}?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async generateSubscriptionInvoice(data) {
+    return await this.request(API_ENDPOINTS.BILLING.GENERATE_SUBSCRIPTION_INVOICE, {
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    });
   }
 
   getToken() {

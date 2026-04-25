@@ -4,6 +4,9 @@ import Prescription from "../models/Prescription.js";
 import Prescriber from "../models/Prescriber.js";
 import PrescriptionReviewToken from "../models/PrescriptionReviewToken.js";
 import User from "../models/User.js";
+import InventoryLot from "../models/InventoryLot.js";
+import Drug from "../models/Drug.js";
+import { sequelize } from "../config/db.js";
 import {
   generatePrescriptionNumber,
   syncMedicationRequestsFromFhir,
@@ -22,6 +25,7 @@ const STATUS_MAP = {
   "In Process": "in_process",
   Ready: "ready",
   "Picked Up": "picked_up",
+  Completed: "completed",
 };
 
 const STATUS_MAP_REVERSE = {
@@ -29,6 +33,7 @@ const STATUS_MAP_REVERSE = {
   in_process: "In Process",
   ready: "Ready",
   picked_up: "Picked Up",
+  completed: "Completed",
   cancelled: "Cancelled",
 };
 
@@ -727,6 +732,201 @@ export const syncFhirPrescriptions = async (req, res) => {
     return res.status(status >= 400 && status < 600 ? status : 502).json({
       success: false,
       message: error.message || "Failed to sync prescriptions from FHIR.",
+    });
+  }
+};
+
+export const dispensePrescription = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { id } = req.params;
+    const { lotId, quantity } = req.body || {};
+
+    if (!lotId) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "lotId is required to dispense a prescription.",
+      });
+    }
+
+    const prescription = await Prescription.findByPk(id, { transaction });
+
+    if (!prescription) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Prescription not found.",
+      });
+    }
+
+    if (prescription.status !== "ready") {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Only prescriptions in Ready status can be dispensed.",
+      });
+    }
+
+    if (prescription.dispensedAt) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "This prescription has already been dispensed.",
+      });
+    }
+
+    const lot = await InventoryLot.findByPk(lotId, {
+      include: [{ model: Drug, as: "drug", required: false }],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!lot) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Inventory lot not found for lotId.",
+      });
+    }
+
+    const fallbackQuantity = Number(prescription.quantityValue);
+    const requestedQuantity =
+      quantity != null && quantity !== "" ? Number(quantity) : fallbackQuantity;
+    const dispensedQuantity = Math.ceil(requestedQuantity);
+
+    if (!Number.isFinite(dispensedQuantity) || dispensedQuantity <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Dispense quantity must be a positive whole number.",
+      });
+    }
+
+    if (lot.quantityOnHand < dispensedQuantity) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient stock in selected lot. Available: ${lot.quantityOnHand}.`,
+      });
+    }
+
+    lot.quantityOnHand -= dispensedQuantity;
+    await lot.save({ transaction });
+
+    prescription.status = "picked_up";
+    prescription.dispensedLotId = lot.id;
+    prescription.dispensedLotNumber = lot.lotNumber;
+    prescription.dispensedQuantity = dispensedQuantity;
+    prescription.dispensedAt = new Date();
+    prescription.dispensedByUserId = req.user?.id || null;
+    await prescription.save({ transaction });
+
+    await transaction.commit();
+
+    await writeAuditLog({
+      entityType: "prescription",
+      entityId: prescription.id,
+      action: "dispensed",
+      summary: `Dispensed prescription ${prescription.prescriptionNumber} from lot ${lot.lotNumber}.`,
+      metadata: {
+        prescriptionId: prescription.id,
+        prescriptionNumber: prescription.prescriptionNumber,
+        lotId: lot.id,
+        lotNumber: lot.lotNumber,
+        dispensedQuantity,
+        remainingLotQuantity: lot.quantityOnHand,
+      },
+      ...buildActorContext(req),
+    });
+
+    const refreshed = await Prescription.findByPk(prescription.id, {
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+          attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
+          required: false,
+        },
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Prescription dispensed successfully with lot traceability.",
+      data: refreshed,
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to dispense prescription.",
+    });
+  }
+};
+
+export const markPrescriptionCompleted = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const prescription = await Prescription.findByPk(id);
+
+    if (!prescription) {
+      return res.status(404).json({
+        success: false,
+        message: "Prescription not found.",
+      });
+    }
+
+    if (prescription.status !== "picked_up") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Only prescriptions in Picked Up status can be marked as completed.",
+      });
+    }
+
+    prescription.status = "completed";
+    await prescription.save();
+
+    await writeAuditLog({
+      entityType: "prescription",
+      entityId: prescription.id,
+      action: "pickup_completed",
+      summary: `Marked prescription ${prescription.prescriptionNumber} as completed after pickup.`,
+      metadata: {
+        prescriptionId: prescription.id,
+        prescriptionNumber: prescription.prescriptionNumber,
+        previousStatus: "picked_up",
+        currentStatus: "completed",
+      },
+      ...buildActorContext(req),
+    });
+
+    const refreshed = await Prescription.findByPk(prescription.id, {
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+          attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
+          required: false,
+        },
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Prescription marked as completed.",
+      data: refreshed,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to mark prescription as completed.",
     });
   }
 };

@@ -2,6 +2,7 @@ import express from "express";
 import {
   createInventoryLot,
   deleteInventoryLot,
+  getLotTraceability,
   listInventoryLots,
   updateInventoryLot,
 } from "../controllers/inventoryController.js";
@@ -15,6 +16,7 @@ export const routeConfig = {
 };
 
 router.get("/lots", verifyToken, listInventoryLots);
+router.get("/lots/traceability", verifyToken, getLotTraceability);
 
 router.post(
   "/lots",

@@ -12,16 +12,23 @@ const NAV_ITEMS = [
   { label: "Prescriptions", to: ROUTES.PRESCRIPTIONS },
   { label: "Inventory", to: ROUTES.INVENTORY },
   { label: "Prescribers", to: ROUTES.PRESCRIBER },
+  { label: "Billing", to: ROUTES.BILLING },
 ];
 
 const AppSidebar = () => {
   const { user } = useAuth();
   const navItems = React.useMemo(() => {
-    if (String(user?.role || "").toLowerCase() !== "admin") {
-      return NAV_ITEMS;
+    const role = String(user?.role || "").toLowerCase();
+    const canAccessBilling = role === "pharmacist" || role === "admin";
+    const baseItems = canAccessBilling
+      ? NAV_ITEMS
+      : NAV_ITEMS.filter((item) => item.to !== ROUTES.BILLING);
+
+    if (role !== "admin") {
+      return baseItems;
     }
 
-    return [...NAV_ITEMS, { label: "Users", to: ROUTES.ADMIN_USERS }];
+    return [...baseItems, { label: "Users", to: ROUTES.ADMIN_USERS }];
   }, [user?.role]);
 
   return (

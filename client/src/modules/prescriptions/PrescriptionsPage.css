@@ -203,6 +203,7 @@
 .prescription-status.in-process { background: #fef3c7; color: #b45309; }
 .prescription-status.ready { background: #dcfce7; color: #15803d; }
 .prescription-status.picked-up { background: #ede9fe; color: #6d28d9; }
+.prescription-status.completed { background: #d1fae5; color: #065f46; }
 .prescription-status.cancelled { background: #ffe4e6; color: #be123c; }
 .prescription-review-pill.not_sent { background: #edf2f7; color: #364152; }
 .prescription-review-pill.pending { background: #fff4dc; color: #9a6700; }
@@ -338,6 +339,10 @@
   border-radius: 16px;
   box-shadow: var(--box-shadow-lg);
   padding: 1.3rem;
+}
+
+.prescription-dispense-modal {
+  width: min(760px, 100%);
 }
 
 @media (max-width: 1100px) {
