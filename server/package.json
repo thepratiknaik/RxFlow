@@ -10,6 +10,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test:db": "node test-db.js",
+    "seed:demo-lots": "node scripts/seedDemoLots.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

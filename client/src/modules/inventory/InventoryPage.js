@@ -366,6 +366,31 @@ const InventoryPage = () => {
     }
   };
 
+  const fillDemoLotSuggestions = () => {
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const expiry = new Date();
+    expiry.setFullYear(expiry.getFullYear() + 1);
+    const expiryDate = expiry.toISOString().slice(0, 10);
+    setLotForm((prev) => ({
+      ...prev,
+      lotNumber: `LOT-2026-${suffix}`,
+      expiryDate: prev.expiryDate || expiryDate,
+      quantityOnHand:
+        prev.quantityOnHand === "0" || prev.quantityOnHand === ""
+          ? "100"
+          : prev.quantityOnHand,
+      minimumLevel: prev.minimumLevel === "" ? "10" : prev.minimumLevel,
+    }));
+  };
+
+  const fillTraceabilityFromFirstStockedLot = () => {
+    const first = lots[0]?.lotNumber;
+    if (first) {
+      setTraceabilityQuery(String(first));
+      setTraceabilityError("");
+    }
+  };
+
   const handlePullSubmit = async (event) => {
     event.preventDefault();
     setPullLoading(true);
@@ -576,12 +601,22 @@ const InventoryPage = () => {
               </label>
               <label>
                 Lot number
-                <input
-                  name="lotNumber"
-                  value={lotForm.lotNumber}
-                  onChange={handleLotFormChange}
-                  required
-                />
+                <div className="inventory-lot-inline-field">
+                  <input
+                    name="lotNumber"
+                    value={lotForm.lotNumber}
+                    onChange={handleLotFormChange}
+                    placeholder="e.g. LOT-2026-A1"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="inventory-secondary-action"
+                    onClick={fillDemoLotSuggestions}
+                  >
+                    Generate lot #
+                  </button>
+                </div>
               </label>
               <label>
                 Expiry date
@@ -845,18 +880,33 @@ const InventoryPage = () => {
                     className="inventory-pull-form"
                     onSubmit={handleTraceabilitySearch}
                   >
-                    <label>
-                      Lot number
-                      <input
-                        type="text"
-                        value={traceabilityQuery}
-                        onChange={(event) => setTraceabilityQuery(event.target.value)}
-                        placeholder="e.g. LOT-2026-A1"
-                      />
-                    </label>
-                    <button type="submit" disabled={traceabilityLoading}>
-                      {traceabilityLoading ? "Searching..." : "Trace lot"}
-                    </button>
+                    <div className="inventory-trace-inline">
+                      <label>
+                        Lot number
+                        <input
+                          type="text"
+                          value={traceabilityQuery}
+                          onChange={(event) => setTraceabilityQuery(event.target.value)}
+                          placeholder="e.g. LOT-2026-A1"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="inventory-secondary-action"
+                        disabled={!lots.length}
+                        onClick={fillTraceabilityFromFirstStockedLot}
+                        title={
+                          lots[0]?.lotNumber
+                            ? `Use ${lots[0].lotNumber}`
+                            : "Add or load stock lots first"
+                        }
+                      >
+                        Use first stocked lot
+                      </button>
+                      <button type="submit" disabled={traceabilityLoading}>
+                        {traceabilityLoading ? "Searching..." : "Trace lot"}
+                      </button>
+                    </div>
                   </form>
                   {traceabilityError ? (
                     <div className="inventory-message error">{traceabilityError}</div>

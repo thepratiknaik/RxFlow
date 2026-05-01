@@ -292,6 +292,41 @@
   font-weight: 600;
 }
 
+.inventory-lot-inline-field {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.inventory-lot-inline-field input {
+  flex: 1;
+  min-width: 9rem;
+}
+
+.inventory-lot-inline-field .inventory-secondary-action {
+  flex: 0 0 auto;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.inventory-trace-inline {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.inventory-trace-inline label {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.inventory-trace-inline > .inventory-secondary-action {
+  margin-bottom: 0.12rem;
+}
+
 .inventory-selected-lot,
 .inventory-kpi,
 .inventory-list-item,
