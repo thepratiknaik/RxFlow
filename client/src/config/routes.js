@@ -12,6 +12,7 @@ export const ROUTES = {
   PRESCRIPTION_REVIEW: "/prescription-review",
   INVENTORY: "/inventory",
   PRESCRIBER: "/prescriber",
+  BILLING: "/billing",
 };
 
 const readEnv = (key) =>
@@ -126,6 +127,8 @@ export const API_ENDPOINTS = {
     FHIR_SYNC: normalizePath("/prescriptions/fhir/sync"),
     DETAIL: (id) => normalizePath(`/prescriptions/${id}`),
     APPROVE_ET_IN: (id) => normalizePath(`/prescriptions/${id}/approve-et-in`),
+    DISPENSE: (id) => normalizePath(`/prescriptions/${id}/dispense`),
+    COMPLETE_PICKUP: (id) => normalizePath(`/prescriptions/${id}/complete-pickup`),
     INSURANCE: (id) => normalizePath(`/prescriptions/${id}/insurance`),
     SEND_FOR_REVIEW: (id) =>
       normalizePath(`/prescriptions/${id}/send-for-review`),
@@ -143,9 +146,18 @@ export const API_ENDPOINTS = {
   INVENTORY: {
     LOTS: normalizePath("/inventory/lots"),
     LOT: (id) => normalizePath(`/inventory/lots/${id}`),
+    LOT_TRACEABILITY: normalizePath("/inventory/lots/traceability"),
   },
   AUDIT_LOGS: {
     LIST: normalizePath("/audit-logs"),
+  },
+  BILLING: {
+    SUBSCRIPTION_INVOICES: normalizePath("/billing/subscription-invoices"),
+    SUBSCRIPTION_INVOICE: (id) =>
+      normalizePath(`/billing/subscription-invoices/${id}`),
+    GENERATE_SUBSCRIPTION_INVOICE: normalizePath(
+      "/billing/subscription-invoices/generate",
+    ),
   },
 };
 

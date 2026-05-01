@@ -12,6 +12,7 @@ const STATUS_TABS = [
   "In Process",
   "Ready",
   "Picked Up",
+  "Completed",
   "Cancelled",
 ];
 
@@ -43,6 +44,10 @@ const normalizeStatus = (value) => {
 
   if (["picked up", "picked_up", "picked-up"].includes(normalized)) {
     return "Picked Up";
+  }
+
+  if (normalized === "completed") {
+    return "Completed";
   }
 
   if (normalized === "cancelled" || normalized === "canceled") {
@@ -121,6 +126,11 @@ const toPrescriptionEntry = (item) => {
       latestSentAt: null,
       latestReviewedAt: null,
     },
+    dispensed_lot_id: item?.dispensedLotId || null,
+    dispensed_lot_number: item?.dispensedLotNumber || null,
+    dispensed_quantity:
+      item?.dispensedQuantity != null ? Number(item.dispensedQuantity) : null,
+    dispensed_at: item?.dispensedAt || null,
   };
 };
 
@@ -147,10 +157,18 @@ const PrescriptionsPage = () => {
   const [formOpen, setFormOpen] = React.useState(false);
   const [formData, setFormData] = React.useState(INITIAL_FORM);
   const [saveLoading, setSaveLoading] = React.useState(false);
+  const [dispenseLoading, setDispenseLoading] = React.useState(false);
+  const [completeLoading, setCompleteLoading] = React.useState(false);
   const [reviewLoading, setReviewLoading] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [saveError, setSaveError] = React.useState("");
   const [saveSuccess, setSaveSuccess] = React.useState("");
+  const [lots, setLots] = React.useState([]);
+  const [dispenseOpen, setDispenseOpen] = React.useState(false);
+  const [dispenseForm, setDispenseForm] = React.useState({
+    lotId: "",
+    quantity: "",
+  });
 
   const fetchPrescriptions = React.useCallback(async () => {
     setLoading(true);
@@ -198,6 +216,18 @@ const PrescriptionsPage = () => {
     }
   }, []);
 
+  const fetchInventoryLots = React.useCallback(async () => {
+    try {
+      const response = await api.listInventoryLots({ page: 1, limit: 500 });
+      const availableLots = (response?.data || []).filter(
+        (lot) => Number(lot?.quantityOnHand) > 0,
+      );
+      setLots(availableLots);
+    } catch {
+      setLots([]);
+    }
+  }, []);
+
   React.useEffect(() => {
     fetchPrescriptions();
   }, [fetchPrescriptions]);
@@ -209,6 +239,10 @@ const PrescriptionsPage = () => {
   React.useEffect(() => {
     fetchPrescribers();
   }, [fetchPrescribers]);
+
+  React.useEffect(() => {
+    fetchInventoryLots();
+  }, [fetchInventoryLots]);
 
   React.useEffect(() => {
     if (!formOpen) {
@@ -369,6 +403,92 @@ const PrescriptionsPage = () => {
       setSaveError(err.message || "Failed to send prescription for review.");
     } finally {
       setReviewLoading("");
+    }
+  };
+
+  const matchingLots = React.useMemo(() => {
+    if (!selected) {
+      return [];
+    }
+
+    const medication = String(selected.drug_name?.join(" ") || "").toLowerCase();
+    const ranked = lots
+      .map((lot) => {
+        const display = String(
+          lot?.drugDisplayName || lot?.drug?.brandName || lot?.drug?.genericName || "",
+        ).toLowerCase();
+        const score = medication && display && medication.includes(display) ? 2 : 0;
+        return { lot, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    return ranked.map((item) => item.lot);
+  }, [lots, selected]);
+
+  const handleOpenDispense = () => {
+    if (!selected) {
+      return;
+    }
+    setSaveError("");
+    setSaveSuccess("");
+    setDispenseForm({
+      lotId: "",
+      quantity: selected.quantity != null ? String(selected.quantity) : "",
+    });
+    setDispenseOpen(true);
+  };
+
+  const handleCloseDispense = () => {
+    setDispenseOpen(false);
+    setDispenseForm({ lotId: "", quantity: "" });
+  };
+
+  const handleDispense = async (event) => {
+    event.preventDefault();
+
+    if (!selected?.prescription_id) {
+      return;
+    }
+
+    setDispenseLoading(true);
+    setSaveError("");
+    setSaveSuccess("");
+
+    try {
+      const response = await api.dispensePrescription(selected.prescription_id, {
+        lotId: dispenseForm.lotId,
+        quantity:
+          dispenseForm.quantity !== "" ? Number(dispenseForm.quantity) : undefined,
+      });
+      setSaveSuccess(
+        response?.message || "Prescription dispensed with lot traceability.",
+      );
+      setDispenseOpen(false);
+      await Promise.all([fetchPrescriptions(), fetchInventoryLots()]);
+    } catch (err) {
+      setSaveError(err.message || "Failed to dispense prescription.");
+    } finally {
+      setDispenseLoading(false);
+    }
+  };
+
+  const handleCompletePickup = async () => {
+    if (!selected?.prescription_id) {
+      return;
+    }
+
+    setCompleteLoading(true);
+    setSaveError("");
+    setSaveSuccess("");
+
+    try {
+      const response = await api.completePrescriptionPickup(selected.prescription_id);
+      setSaveSuccess(response?.message || "Prescription marked as completed.");
+      await fetchPrescriptions();
+    } catch (err) {
+      setSaveError(err.message || "Failed to complete pickup status.");
+    } finally {
+      setCompleteLoading(false);
     }
   };
 
@@ -568,6 +688,18 @@ const PrescriptionsPage = () => {
                     <span>Created At</span>
                     <strong>{formatDateTime(selected.created_at)}</strong>
                   </div>
+                  <div>
+                    <span>Dispensed Lot</span>
+                    <strong>{selected.dispensed_lot_number || "N/A"}</strong>
+                  </div>
+                  <div>
+                    <span>Dispensed Quantity</span>
+                    <strong>{selected.dispensed_quantity ?? "N/A"}</strong>
+                  </div>
+                  <div>
+                    <span>Dispensed At</span>
+                    <strong>{formatDateTime(selected.dispensed_at)}</strong>
+                  </div>
                 </div>
                 <div className="prescription-review-history">
                   <div className="prescription-review-history-header">
@@ -631,6 +763,29 @@ const PrescriptionsPage = () => {
                       {reviewLoading === selected.prescription_id
                         ? "Sending..."
                         : "Send for review"}
+                    </button>
+                  </div>
+                ) : null}
+                {selected.status === "Ready" ? (
+                  <div className="prescription-details-actions">
+                    <button
+                      type="button"
+                      className="prescription-primary-btn"
+                      onClick={handleOpenDispense}
+                    >
+                      Dispense with lot selection
+                    </button>
+                  </div>
+                ) : null}
+                {selected.status === "Picked Up" ? (
+                  <div className="prescription-details-actions">
+                    <button
+                      type="button"
+                      className="prescription-primary-btn"
+                      onClick={handleCompletePickup}
+                      disabled={completeLoading}
+                    >
+                      {completeLoading ? "Completing..." : "Mark as completed"}
                     </button>
                   </div>
                 ) : null}
@@ -787,6 +942,88 @@ const PrescriptionsPage = () => {
                   disabled={saveLoading}
                 >
                   {saveLoading ? "Saving..." : "Create Prescription"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {dispenseOpen ? (
+        <div className="prescription-modal-backdrop" onClick={handleCloseDispense}>
+          <div
+            className="prescription-modal prescription-dispense-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="prescription-modal-header">
+              <div>
+                <h3>Dispense Prescription</h3>
+                <p className="prescription-subtitle">
+                  Select an inventory lot to record traceable dispensing.
+                </p>
+              </div>
+              <button
+                className="prescription-modal-close"
+                onClick={handleCloseDispense}
+              >
+                Close
+              </button>
+            </div>
+
+            <form className="prescription-form" onSubmit={handleDispense}>
+              <div className="prescription-form-grid">
+                <label className="prescription-form-span-2">
+                  Inventory Lot
+                  <select
+                    value={dispenseForm.lotId}
+                    onChange={(event) =>
+                      setDispenseForm((current) => ({
+                        ...current,
+                        lotId: event.target.value,
+                      }))
+                    }
+                    required
+                  >
+                    <option value="">Select lot</option>
+                    {matchingLots.map((lot) => (
+                      <option key={lot.id} value={lot.id}>
+                        {lot.drugDisplayName || "Drug"} | Lot {lot.lotNumber} |
+                        Expires {lot.expiryDate} | On hand {lot.quantityOnHand}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Quantity to Dispense
+                  <input
+                    type="number"
+                    min="1"
+                    value={dispenseForm.quantity}
+                    onChange={(event) =>
+                      setDispenseForm((current) => ({
+                        ...current,
+                        quantity: event.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="prescription-modal-actions">
+                <button
+                  type="button"
+                  className="prescription-secondary-btn"
+                  onClick={handleCloseDispense}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="prescription-primary-btn"
+                  disabled={dispenseLoading}
+                >
+                  {dispenseLoading ? "Dispensing..." : "Confirm dispense"}
                 </button>
               </div>
             </form>

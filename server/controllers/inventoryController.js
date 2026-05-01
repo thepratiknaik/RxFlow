@@ -1,6 +1,8 @@
 import { Op } from "sequelize";
 import Drug from "../models/Drug.js";
 import InventoryLot from "../models/InventoryLot.js";
+import Prescription from "../models/Prescription.js";
+import Patient from "../models/Patient.js";
 import { sequelize } from "../config/db.js";
 import {
   drugDisplayName,
@@ -304,6 +306,92 @@ export const deleteInventoryLot = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to delete inventory lot.",
+    });
+  }
+};
+
+export const getLotTraceability = async (req, res) => {
+  try {
+    const lotNumber = String(req.query?.lotNumber || "").trim();
+
+    if (!lotNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "lotNumber query parameter is required.",
+      });
+    }
+
+    const lots = await InventoryLot.findAll({
+      where: {
+        lotNumber: {
+          [Op.iLike]: `%${lotNumber}%`,
+        },
+      },
+      include: [
+        {
+          model: Drug,
+          as: "drug",
+          required: true,
+        },
+      ],
+      order: [
+        ["expiryDate", "ASC"],
+        ["createdat", "DESC"],
+      ],
+    });
+
+    const dispenses = await Prescription.findAll({
+      where: {
+        dispensedLotNumber: {
+          [Op.iLike]: `%${lotNumber}%`,
+        },
+      },
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+          attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
+          required: false,
+        },
+      ],
+      order: [["dispensedAt", "DESC"]],
+    });
+
+    const lotData = lots.map(serializeInventoryLot);
+    const dispenseData = dispenses.map((prescription) => ({
+      id: prescription.id,
+      prescriptionNumber: prescription.prescriptionNumber,
+      status: prescription.status,
+      patientId: prescription.patientId,
+      patientName: prescription.patient
+        ? `${prescription.patient.firstName || ""} ${prescription.patient.lastName || ""}`.trim()
+        : null,
+      medicationDisplay: prescription.medicationDisplay,
+      dispensedLotId: prescription.dispensedLotId,
+      dispensedLotNumber: prescription.dispensedLotNumber,
+      dispensedQuantity:
+        prescription.dispensedQuantity != null
+          ? Number(prescription.dispensedQuantity)
+          : null,
+      dispensedAt: prescription.dispensedAt,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        lotNumber,
+        stockedLots: lotData,
+        dispensedPrescriptions: dispenseData,
+      },
+      summary: {
+        stockedLotCount: lotData.length,
+        dispensedCount: dispenseData.length,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch lot traceability details.",
     });
   }
 };

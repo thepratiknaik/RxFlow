@@ -63,6 +63,10 @@ const InventoryPage = () => {
   const [lotSaving, setLotSaving] = React.useState(false);
   const [lotDeleting, setLotDeleting] = React.useState(false);
   const [lotMessage, setLotMessage] = React.useState({ tone: "", text: "" });
+  const [traceabilityQuery, setTraceabilityQuery] = React.useState("");
+  const [traceabilityLoading, setTraceabilityLoading] = React.useState(false);
+  const [traceabilityError, setTraceabilityError] = React.useState("");
+  const [traceabilityResult, setTraceabilityResult] = React.useState(null);
 
   const [drugs, setDrugs] = React.useState([]);
   const [pagination, setPagination] = React.useState({
@@ -362,6 +366,31 @@ const InventoryPage = () => {
     }
   };
 
+  const fillDemoLotSuggestions = () => {
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const expiry = new Date();
+    expiry.setFullYear(expiry.getFullYear() + 1);
+    const expiryDate = expiry.toISOString().slice(0, 10);
+    setLotForm((prev) => ({
+      ...prev,
+      lotNumber: `LOT-2026-${suffix}`,
+      expiryDate: prev.expiryDate || expiryDate,
+      quantityOnHand:
+        prev.quantityOnHand === "0" || prev.quantityOnHand === ""
+          ? "100"
+          : prev.quantityOnHand,
+      minimumLevel: prev.minimumLevel === "" ? "10" : prev.minimumLevel,
+    }));
+  };
+
+  const fillTraceabilityFromFirstStockedLot = () => {
+    const first = lots[0]?.lotNumber;
+    if (first) {
+      setTraceabilityQuery(String(first));
+      setTraceabilityError("");
+    }
+  };
+
   const handlePullSubmit = async (event) => {
     event.preventDefault();
     setPullLoading(true);
@@ -382,6 +411,28 @@ const InventoryPage = () => {
       setPullError(err.message || "Failed to queue drug pull.");
     } finally {
       setPullLoading(false);
+    }
+  };
+
+  const handleTraceabilitySearch = async (event) => {
+    event.preventDefault();
+    const query = traceabilityQuery.trim();
+    if (!query) {
+      setTraceabilityError("Enter a lot number to search.");
+      setTraceabilityResult(null);
+      return;
+    }
+
+    setTraceabilityLoading(true);
+    setTraceabilityError("");
+    try {
+      const response = await api.getLotTraceability(query);
+      setTraceabilityResult(response?.data || null);
+    } catch (err) {
+      setTraceabilityError(err.message || "Failed to load lot traceability.");
+      setTraceabilityResult(null);
+    } finally {
+      setTraceabilityLoading(false);
     }
   };
 
@@ -550,12 +601,22 @@ const InventoryPage = () => {
               </label>
               <label>
                 Lot number
-                <input
-                  name="lotNumber"
-                  value={lotForm.lotNumber}
-                  onChange={handleLotFormChange}
-                  required
-                />
+                <div className="inventory-lot-inline-field">
+                  <input
+                    name="lotNumber"
+                    value={lotForm.lotNumber}
+                    onChange={handleLotFormChange}
+                    placeholder="e.g. LOT-2026-A1"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="inventory-secondary-action"
+                    onClick={fillDemoLotSuggestions}
+                  >
+                    Generate lot #
+                  </button>
+                </div>
               </label>
               <label>
                 Expiry date
@@ -806,6 +867,67 @@ const InventoryPage = () => {
                   {pullError ? <div className="inventory-message error">{pullError}</div> : null}
                   {pullSuccess ? (
                     <div className="inventory-message success">{pullSuccess}</div>
+                  ) : null}
+                </Card>
+
+                <Card className="inventory-panel">
+                  <h3>Lot traceability</h3>
+                  <p className="inventory-subtitle">
+                    Search a lot number to trace stocked inventory and dispensed
+                    prescriptions for recall investigations.
+                  </p>
+                  <form
+                    className="inventory-pull-form"
+                    onSubmit={handleTraceabilitySearch}
+                  >
+                    <div className="inventory-trace-inline">
+                      <label>
+                        Lot number
+                        <input
+                          type="text"
+                          value={traceabilityQuery}
+                          onChange={(event) => setTraceabilityQuery(event.target.value)}
+                          placeholder="e.g. LOT-2026-A1"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="inventory-secondary-action"
+                        disabled={!lots.length}
+                        onClick={fillTraceabilityFromFirstStockedLot}
+                        title={
+                          lots[0]?.lotNumber
+                            ? `Use ${lots[0].lotNumber}`
+                            : "Add or load stock lots first"
+                        }
+                      >
+                        Use first stocked lot
+                      </button>
+                      <button type="submit" disabled={traceabilityLoading}>
+                        {traceabilityLoading ? "Searching..." : "Trace lot"}
+                      </button>
+                    </div>
+                  </form>
+                  {traceabilityError ? (
+                    <div className="inventory-message error">{traceabilityError}</div>
+                  ) : null}
+                  {traceabilityResult ? (
+                    <div className="inventory-audit-list">
+                      <div className="inventory-audit-item">
+                        <strong>Stocked lots</strong>
+                        <p>
+                          {traceabilityResult.stockedLots?.length || 0} record(s)
+                          matched
+                        </p>
+                      </div>
+                      <div className="inventory-audit-item">
+                        <strong>Dispensed prescriptions</strong>
+                        <p>
+                          {traceabilityResult.dispensedPrescriptions?.length || 0}{" "}
+                          dispense event(s) matched
+                        </p>
+                      </div>
+                    </div>
                   ) : null}
                 </Card>
 

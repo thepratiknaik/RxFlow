@@ -45,6 +45,26 @@ const sequelize = new Sequelize(
   },
 );
 
+/**
+ * sequelize.sync({ alter: false }) does not add new columns to existing tables.
+ * Lot traceability queries need prescription dispense columns present on older DBs.
+ */
+const ensurePrescriptionDispenseColumns = async () => {
+  if (sequelize.getDialect() !== "postgres") {
+    return;
+  }
+  const statements = [
+    `ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "dispensedLotId" UUID`,
+    `ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "dispensedLotNumber" VARCHAR(255)`,
+    `ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "dispensedQuantity" INTEGER`,
+    `ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "dispensedAt" TIMESTAMP WITH TIME ZONE`,
+    `ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "dispensedByUserId" UUID`,
+  ];
+  for (const sql of statements) {
+    await sequelize.query(sql);
+  }
+};
+
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
@@ -52,6 +72,7 @@ const connectDB = async () => {
 
     // Sync models with database
     await sequelize.sync({ alter: false });
+    await ensurePrescriptionDispenseColumns();
     console.log("Database synchronized");
 
     return sequelize;

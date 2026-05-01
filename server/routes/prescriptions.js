@@ -3,8 +3,10 @@ import {
   approvePrescriptionEtIn,
   createPrescriptionEntry,
   createPrescriptionManual,
+  dispensePrescription,
   getPrescription,
   listPrescriptions,
+  markPrescriptionCompleted,
   patchPrescriptionInsurance,
   syncFhirPrescriptions,
 } from "../controllers/prescriptionController.js";
@@ -57,6 +59,20 @@ router.post(
   verifyToken,
   authorizePharmacistOnly,
   approvePrescriptionEtIn,
+);
+
+router.post(
+  "/:id/dispense",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  dispensePrescription,
+);
+
+router.post(
+  "/:id/complete-pickup",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  markPrescriptionCompleted,
 );
 
 router.patch(

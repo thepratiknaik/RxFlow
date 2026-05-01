@@ -827,6 +827,78 @@ const endpointMetadata = {
       ],
     },
   },
+  "GET /api/inventory/lots/traceability": {
+    name: "Lot Traceability Lookup",
+    description:
+      "Searches by lot number to return matching stocked lots and dispensed prescriptions for recall/traceability workflows.",
+    authRequired: true,
+  },
+  "POST /api/billing/subscription-invoices/generate": {
+    name: "Generate Subscription Invoice",
+    description:
+      "Generates an invoice for a pharmacy subscription period including related billing items such as usage and add-ons.",
+    authRequired: true,
+    requestBody: {
+      label: "Subscription invoice payload",
+      fields: [
+        {
+          name: "pharmacyId",
+          type: "string",
+          required: true,
+          example: "PHARM-001",
+        },
+        {
+          name: "pharmacyName",
+          type: "string",
+          required: false,
+          example: "Downtown Pharmacy",
+        },
+        {
+          name: "billingPeriodStart",
+          type: "string (date)",
+          required: true,
+          example: "2026-04-01",
+        },
+        {
+          name: "billingPeriodEnd",
+          type: "string (date)",
+          required: true,
+          example: "2026-04-30",
+        },
+        {
+          name: "taxRatePercent",
+          type: "number",
+          required: false,
+          example: 7.5,
+        },
+        {
+          name: "items",
+          type: "array",
+          required: true,
+          example: [
+            {
+              itemType: "subscription",
+              description: "Monthly subscription",
+              quantity: 1,
+              unitPrice: 199,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  "GET /api/billing/subscription-invoices": {
+    name: "List Subscription Invoices",
+    description:
+      "Returns paginated subscription invoices, optionally filtered by pharmacyId.",
+    authRequired: true,
+  },
+  "GET /api/billing/subscription-invoices/:id": {
+    name: "Get Subscription Invoice",
+    description:
+      "Returns one subscription invoice with all billing line items.",
+    authRequired: true,
+  },
 };
 
 const buildExampleBody = (requestBody) => {

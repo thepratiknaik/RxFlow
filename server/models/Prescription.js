@@ -21,6 +21,7 @@ const Prescription = sequelize.define(
         "in_process",
         "ready",
         "picked_up",
+        "completed",
         "cancelled",
       ),
       allowNull: false,
@@ -120,6 +121,37 @@ const Prescription = sequelize.define(
       allowNull: true,
     },
     etInApprovedByUserId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "users",
+        key: "id",
+      },
+    },
+    dispensedLotId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "inventory_lots",
+        key: "id",
+      },
+    },
+    dispensedLotNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    dispensedQuantity: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      validate: {
+        min: 1,
+      },
+    },
+    dispensedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    dispensedByUserId: {
       type: DataTypes.UUID,
       allowNull: true,
       references: {
