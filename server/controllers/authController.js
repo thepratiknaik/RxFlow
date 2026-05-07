@@ -1,7 +1,8 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
-import { Op } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import { normalizeRole } from "../services/schemaCompatService.js";
+import { sequelize } from "../config/db.js";
 
 // Generate JWT Token
 const generateToken = (id, role) => {
@@ -41,12 +42,13 @@ export const register = async (req, res) => {
       });
     }
 
-    // Create user
+    // Create user (admin signup, no pharmacy assigned yet)
     const user = await User.create({
       fullname,
       email,
       password,
       role: normalizeRole("admin"),
+      pharmacyId: null,
     });
 
     // Generate token
@@ -239,9 +241,7 @@ export const listUsers = async (req, res) => {
     const where = { pharmacyId: actor.pharmacyId };
 
     if (search) {
-      where[Op.or] = [
-        { email: { [Op.iLike]: `%${search}%` } },
-      ];
+      where[Op.or] = [{ email: { [Op.iLike]: `%${search}%` } }];
     }
 
     const users = await User.findAll({
@@ -350,6 +350,85 @@ export const updateUserRole = async (req, res) => {
 // @desc    Create a new user as admin
 // @route   POST /api/auth/users
 // @access  Admin
+// @desc    Setup pharmacy for admin user during onboarding
+// @route   POST /api/auth/setup-pharmacy
+// @access  Admin
+export const setupPharmacy = async (req, res) => {
+  try {
+    const { name, licenseNumber } = req.body;
+    const adminId = req.user?.id;
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authenticated",
+      });
+    }
+
+    if (!name || !licenseNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Pharmacy name and license number are required",
+      });
+    }
+
+    // Create pharmacy for this admin
+    const pharmacyResult = await sequelize.query(
+      `
+        INSERT INTO pharmacy (name, license_number, subscription_tier, status_id)
+        SELECT :name, :licenseNumber, 'Standard', id
+        FROM pharmacy_status
+        WHERE lower(status) = 'active'
+        LIMIT 1
+        RETURNING pharmacy_id
+      `,
+      {
+        replacements: {
+          name: String(name).trim(),
+          licenseNumber: String(licenseNumber).trim(),
+        },
+        type: QueryTypes.INSERT,
+      },
+    );
+
+    const pharmacyId = pharmacyResult?.[0]?.[0]?.pharmacy_id;
+    if (!pharmacyId) {
+      throw new Error("Failed to create pharmacy");
+    }
+
+    // Assign pharmacy to admin user
+    const user = await User.findByPk(adminId);
+    if (user) {
+      user.pharmacyId = pharmacyId;
+      await user.save();
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Pharmacy setup complete",
+      pharmacy: {
+        id: pharmacyId,
+        name,
+        licenseNumber,
+      },
+      user: {
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+        isactive: user.isactive,
+        pharmacyId: user.pharmacyId,
+      },
+    });
+  } catch (error) {
+    console.error("Setup pharmacy error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error setting up pharmacy",
+    });
+  }
+};
+
 export const createUser = async (req, res) => {
   try {
     const { fullname, email, password, confirmPassword, role } = req.body;

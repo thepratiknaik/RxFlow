@@ -19,7 +19,7 @@ const User = sequelize.define(
     },
     pharmacyId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "pharmacy_id",
     },
     roleId: {
@@ -74,16 +74,10 @@ const User = sequelize.define(
 );
 
 User.beforeValidate(async (user) => {
-  if (!user.pharmacyId) {
-    const pharmacyId = await getDefaultPharmacyId();
-    if (!pharmacyId) {
-      throw new Error("At least one pharmacy row must exist before creating users.");
-    }
-    user.pharmacyId = pharmacyId;
-  }
-
   if (!user.roleId) {
-    user.roleId = await getRoleIdByName(user.getDataValue("roleName") || "technician");
+    user.roleId = await getRoleIdByName(
+      user.getDataValue("roleName") || "technician",
+    );
   }
 });
 

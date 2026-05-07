@@ -249,6 +249,22 @@ class ApiService {
     });
   }
 
+  async setupPharmacy({ name, licenseNumber }) {
+    const data = await this.request(API_ENDPOINTS.AUTH.SETUP_PHARMACY, {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        licenseNumber,
+      }),
+    });
+
+    if (data?.user) {
+      this.storeAuth(data);
+    }
+
+    return data;
+  }
+
   async updateUserRole(id, role) {
     return await this.request(API_ENDPOINTS.AUTH.USER_ROLE(id), {
       method: "PATCH",

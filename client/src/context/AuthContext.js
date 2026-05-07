@@ -22,9 +22,7 @@ export const AuthProvider = ({ children }) => {
   const resolveOnboardingState = React.useCallback((nextUser) => {
     const normalizedRole = String(nextUser?.role || "").toLowerCase();
     const shouldOnboard =
-      normalizedRole === "admin" &&
-      !!nextUser?.id &&
-      !localStorage.getItem(getOnboardingKey(nextUser.id));
+      normalizedRole === "admin" && !!nextUser?.id && !nextUser?.pharmacyId;
 
     setNeedsOnboarding(shouldOnboard);
   }, []);
@@ -119,13 +117,11 @@ export const AuthProvider = ({ children }) => {
     return await api.createUser(data);
   };
 
-  const completeOnboarding = () => {
-    if (!user?.id) {
-      return;
-    }
-
-    localStorage.setItem(getOnboardingKey(user.id), "1");
+  const setupPharmacy = async (data) => {
+    const result = await api.setupPharmacy(data);
+    setUser(result.user);
     setNeedsOnboarding(false);
+    return result;
   };
 
   const value = {
@@ -142,7 +138,7 @@ export const AuthProvider = ({ children }) => {
     listUsers,
     createUser,
     updateUserRole,
-    completeOnboarding,
+    setupPharmacy,
   };
 
   return (

@@ -1,4 +1,4 @@
-.header {
+.app-header {
   position: sticky;
   top: 0;
   z-index: 20;
@@ -12,12 +12,12 @@
   gap: 0.8rem;
 }
 
-.header-left {
+.app-header-left {
   justify-self: start;
   min-width: 0;
 }
 
-.header-left h2 {
+.app-header-left h2 {
   margin: 0;
   color: var(--text-dark);
   font-size: 1.18rem;
@@ -27,14 +27,14 @@
   text-overflow: ellipsis;
 }
 
-.header-center {
+.app-header-center {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   justify-self: center;
 }
 
-.header-logo-image {
+.app-header-logo-image {
   width: 34px;
   height: 34px;
   border-radius: 10px;
@@ -42,13 +42,13 @@
   border: 1px solid var(--medium-gray);
 }
 
-.header-logo-text {
+.app-header-logo-text {
   color: var(--text-dark);
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
-.header-right {
+.app-header-right {
   justify-self: end;
   display: flex;
   align-items: center;
@@ -60,6 +60,16 @@
 }
 
 .profile-mini {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--teal);
+  color: #fff;
+  font-weight: 700;
+  user-select: none;
   cursor: pointer;
 }
 
@@ -112,23 +122,23 @@
 }
 
 @media (max-width: 700px) {
-  .header {
+  .app-header {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       "logo menu"
       "title title";
   }
 
-  .header-left {
+  .app-header-left {
     grid-area: title;
   }
 
-  .header-center {
+  .app-header-center {
     grid-area: logo;
     justify-self: start;
   }
 
-  .header-right {
+  .app-header-right {
     grid-area: menu;
     justify-self: end;
   }

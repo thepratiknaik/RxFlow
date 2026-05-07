@@ -5,16 +5,16 @@ import "./AppHeader.css";
 
 const AppHeader = ({ title, actions }) => {
   return (
-    <header className="header">
-      <div className="header-left">
+    <div className="app-header">
+      <div className="app-header-left">
         <h2>{title}</h2>
       </div>
-      <div className="header-center" aria-label="Application logo">
-        <img src={logo} alt="RxFlow" className="header-logo-image" />
-        <span className="header-logo-text">RxFlow</span>
+      <div className="app-header-center" aria-label="Application logo">
+        <img src={logo} alt="RxFlow" className="app-header-logo-image" />
+        <span className="app-header-logo-text">RxFlow</span>
       </div>
-      <div className="header-right">{actions ?? <ProfileDropdown />}</div>
-    </header>
+      <div className="app-header-right">{actions ?? <ProfileDropdown />}</div>
+    </div>
   );
 };
 

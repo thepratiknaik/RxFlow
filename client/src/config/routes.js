@@ -103,6 +103,7 @@ export const API_ENDPOINTS = {
     ),
     USERS: normalizePath("/auth/users"),
     CREATE_USER: normalizePath("/auth/users"),
+    SETUP_PHARMACY: normalizePath("/auth/setup-pharmacy"),
     USER_ROLE: (id) => normalizePath(`/auth/users/${id}/role`),
   },
   PROFILE: {

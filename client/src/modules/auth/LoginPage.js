@@ -40,8 +40,7 @@ const LoginPage = () => {
       console.log("Login successful:", result);
       const shouldOnboard =
         String(result?.user?.role || "").toLowerCase() === "admin" &&
-        result?.user?.id &&
-        !localStorage.getItem(`onboarding-complete-${result.user.id}`);
+        !result?.user?.pharmacyId;
 
       navigate(shouldOnboard ? ROUTES.ONBOARDING : ROUTES.DASHBOARD);
     } catch (err) {

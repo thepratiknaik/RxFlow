@@ -78,7 +78,7 @@ CREATE TABLE pharmacy (
 
 CREATE TABLE "user" (
     user_id         SERIAL          PRIMARY KEY,
-    pharmacy_id     INT             NOT NULL,
+    pharmacy_id     INT,
     role_id         INT             NOT NULL,
     email           VARCHAR(255)    NOT NULL UNIQUE,
     password_hash   VARCHAR(512)    NOT NULL,

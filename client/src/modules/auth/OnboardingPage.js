@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AppHeader from "../../components/AppHeader.js";
 import Card from "../../components/Card.js";
 import { ROUTES } from "../../config/routes.js";
 import { useAuth } from "../../context/AuthContext.js";
@@ -8,7 +9,7 @@ import "./OnboardingPage.css";
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
-  const { user, listUsers, completeOnboarding } = useAuth();
+  const { user, listUsers, setupPharmacy } = useAuth();
   const [pharmacyName, setPharmacyName] = React.useState("");
   const [licenseNumber, setLicenseNumber] = React.useState("");
   const [pharmacySaved, setPharmacySaved] = React.useState(false);
@@ -33,7 +34,9 @@ const OnboardingPage = () => {
       const response = await listUsers({});
       const users = response?.users || [];
       setTeamReady(users.length > 1);
-      setMessage((current) => (current.tone === "error" ? current : { tone: "", text: "" }));
+      setMessage((current) =>
+        current.tone === "error" ? current : { tone: "", text: "" },
+      );
     } catch {
       setTeamReady(false);
       setMessage({
@@ -117,12 +120,12 @@ const OnboardingPage = () => {
       return;
     }
 
-    completeOnboarding();
     navigate(ROUTES.DASHBOARD);
   };
 
   return (
     <div className="onboarding-screen">
+      <AppHeader title="Onboarding" />
       <div className="onboarding-page">
         <div className="onboarding-modal-backdrop">
           <div className="onboarding-modal">
@@ -179,7 +182,9 @@ const OnboardingPage = () => {
             </div>
 
             {message.text ? (
-              <div className={`onboarding-message ${message.tone}`}>{message.text}</div>
+              <div className={`onboarding-message ${message.tone}`}>
+                {message.text}
+              </div>
             ) : null}
 
             {currentStep === 1 ? (
@@ -188,8 +193,8 @@ const OnboardingPage = () => {
                   <div>
                     <h3>Step 1: Create pharmacy</h3>
                     <p className="onboarding-step-copy">
-                      This creates your pharmacy in the database and links it to your admin
-                      account.
+                      This creates your pharmacy in the database and links it to
+                      your admin account.
                     </p>
                   </div>
                   <span
@@ -234,10 +239,13 @@ const OnboardingPage = () => {
                   <div>
                     <h3>Step 2: Add users</h3>
                     <p className="onboarding-step-copy">
-                      Add at least one additional user from the admin users page.
+                      Add at least one additional user from the admin users
+                      page.
                     </p>
                   </div>
-                  <span className={`onboarding-status ${teamReady ? "done" : "todo"}`}>
+                  <span
+                    className={`onboarding-status ${teamReady ? "done" : "todo"}`}
+                  >
                     {teamReady ? "Completed" : "Pending"}
                   </span>
                 </div>
@@ -272,7 +280,8 @@ const OnboardingPage = () => {
                   <div>
                     <h3>Step 3: Open dashboard</h3>
                     <p className="onboarding-step-copy">
-                      Finish onboarding after pharmacy and team setup are complete.
+                      Finish onboarding after pharmacy and team setup are
+                      complete.
                     </p>
                   </div>
                 </div>
@@ -284,7 +293,11 @@ const OnboardingPage = () => {
                   >
                     Back
                   </button>
-                  <button type="button" onClick={handleFinish} disabled={!canFinish}>
+                  <button
+                    type="button"
+                    onClick={handleFinish}
+                    disabled={!canFinish}
+                  >
                     Finish onboarding and open dashboard
                   </button>
                 </div>

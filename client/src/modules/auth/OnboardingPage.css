@@ -4,11 +4,11 @@
 }
 
 .onboarding-page {
-  min-height: 100vh;
+  min-height: calc(100vh - 74px);
 }
 
 .onboarding-modal-backdrop {
-  min-height: 100vh;
+  min-height: calc(100vh - 74px);
   display: grid;
   place-items: center;
   padding: 1.25rem;
