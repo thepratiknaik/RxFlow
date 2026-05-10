@@ -26,10 +26,64 @@ const Patient = sequelize.define(
       allowNull: false,
       field: "last_name",
     },
+    middleName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "middle_name",
+    },
     dateOfBirth: {
       type: DataTypes.DATEONLY,
       allowNull: false,
       field: "dob",
+    },
+    gender: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    phonePrimary: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "phone_primary",
+    },
+    phoneSecondary: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "phone_secondary",
+    },
+    addressLine1: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "address_line1",
+    },
+    addressLine2: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "address_line2",
+    },
+    city: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    state: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    zipCode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "zip_code",
+    },
+    mrn: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
   },
   {

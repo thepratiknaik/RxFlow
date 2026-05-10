@@ -32,7 +32,7 @@ const mapFhirStatus = (value) => {
     return "ready";
   }
   if (normalized === "cancelled" || normalized === "entered-in-error" || normalized === "stopped") {
-    return "picked_up";
+    return "cancelled";
   }
   return "new";
 };
@@ -99,10 +99,13 @@ export const syncMedicationRequestsFromFhir = async ({
       ndcCode: resource.medicationCodeableConcept?.coding?.[0]?.code || null,
       brandName: medicationDisplay,
       genericName: medicationDisplay,
+      dosageForm: resource.medicationCodeableConcept?.coding?.[0]?.display || null,
+      route: resource?.dosageInstruction?.[0]?.route?.text || null,
     });
     const prescriberId = await ensurePrescriberByDescriptor({
       npi: resource.requester?.identifier?.value || null,
       name: resource.requester?.display || resource.requester?.reference || "FHIR Prescriber",
+      email: null,
     });
     const patientId = await ensurePatientByDescriptor({
       firstName: "FHIR",

@@ -26,6 +26,15 @@ const Drug = sequelize.define(
       allowNull: false,
       field: "generic_name",
     },
+    dosageform: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "dosage_form",
+    },
+    route: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     iscontrolled: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

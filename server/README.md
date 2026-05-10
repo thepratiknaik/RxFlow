@@ -41,7 +41,33 @@ SMTP_FROM=no-reply@rxlfow.example.com
 npm run test:db
 ```
 
-4. **Start development server:**
+4. **Validate/bootstrap schema against the DDL (optional):**
+
+```bash
+npm run db:bootstrap
+# or
+npm run db:schema
+```
+
+This command uses the database from your current `.env` file:
+- If `DB_ROOT_USER` and `DB_ROOT_PASSWORD` are set, it first connects as the PostgreSQL admin/root user, creates `DB_NAME` if missing, creates/updates `DB_USER` if missing, and grants the app role access.
+- If all DDL tables already exist, it skips the bootstrap.
+- If the connected database is fresh or contains none of the DDL tables, it runs `server/models/schema/schema_ddl.sql`.
+- If the connected database partially matches the DDL, it stops with an error so you can point the app at a new database instead of mixing legacy and strict-DDL tables.
+
+To replace the current database with a clean one while preserving a backup, run:
+
+```bash
+npm run db:reset
+```
+
+This command:
+- renames the current `DB_NAME` database to a timestamped `_legacy_...` backup when it already exists
+- creates a fresh database with the original `DB_NAME`
+- ensures the configured app role exists and can connect
+- runs the DDL bootstrap on the new database
+
+5. **Start development server:**
 
 ```bash
 npm run dev

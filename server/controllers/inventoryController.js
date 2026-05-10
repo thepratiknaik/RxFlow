@@ -21,11 +21,14 @@ const loadInventoryLot = async (id) =>
 
 const serializeInventoryLot = (row) => {
   const plain = row.get({ plain: true });
+  const minimumLevel = Number(plain.minimumLevel ?? 0);
+  const quantityOnHand = Number(plain.quantityOnHand ?? 0);
+  const belowThreshold = quantityOnHand < minimumLevel;
   return {
     ...plain,
-    minimumLevel: 0,
-    belowThreshold: false,
-    thresholdDelta: 0,
+    minimumLevel,
+    belowThreshold,
+    thresholdDelta: quantityOnHand - minimumLevel,
     drugDisplayName:
       plain.drug?.brandname || plain.drug?.genericname || plain.drug?.productndc || "Drug",
   };
@@ -35,10 +38,10 @@ export const listInventoryLots = async (req, res) => {
   try {
     const limit = toLimit(req.query?.limit, 50, 200);
     const page = Math.max(Number(req.query?.page) || 1, 1);
+    const belowThresholdOnly =
+      String(req.query?.belowThreshold || "").toLowerCase() === "true";
 
-    const { rows, count } = await InventoryLot.findAndCountAll({
-      limit,
-      offset: (page - 1) * limit,
+    const { rows } = await InventoryLot.findAndCountAll({
       order: [["expiryDate", "ASC"]],
       include: [
         {
@@ -49,7 +52,15 @@ export const listInventoryLots = async (req, res) => {
       ],
     });
 
-    const data = rows.map(serializeInventoryLot);
+    const serializedRows = rows.map(serializeInventoryLot);
+    const filteredRows = belowThresholdOnly
+      ? serializedRows.filter((row) => row.belowThreshold)
+      : serializedRows;
+    const count = filteredRows.length;
+    const data = filteredRows.slice((page - 1) * limit, page * limit);
+    const belowThresholdTotal = serializedRows.filter(
+      (row) => row.belowThreshold,
+    ).length;
 
     return res.status(200).json({
       success: true,
@@ -61,8 +72,8 @@ export const listInventoryLots = async (req, res) => {
         totalPages: Math.max(Math.ceil(count / limit), 1),
       },
       summary: {
-        belowThresholdTotal: 0,
-        totalLotRows: count,
+        belowThresholdTotal,
+        totalLotRows: serializedRows.length,
       },
     });
   } catch (error) {
@@ -75,7 +86,7 @@ export const listInventoryLots = async (req, res) => {
 
 export const createInventoryLot = async (req, res) => {
   try {
-    const { drugId, lotNumber, expiryDate, quantityOnHand } = req.body || {};
+    const { drugId, lotNumber, expiryDate, quantityOnHand, minimumLevel } = req.body || {};
 
     if (!drugId || !lotNumber || !expiryDate) {
       return res.status(400).json({
@@ -96,6 +107,10 @@ export const createInventoryLot = async (req, res) => {
       quantityOnHand != null && quantityOnHand !== ""
         ? Number(quantityOnHand)
         : 0;
+    const minLevel =
+      minimumLevel != null && minimumLevel !== ""
+        ? Number(minimumLevel)
+        : 0;
 
     if (!Number.isFinite(qty) || qty < 0) {
       return res.status(400).json({
@@ -103,11 +118,18 @@ export const createInventoryLot = async (req, res) => {
         message: "quantityOnHand must be a non-negative number.",
       });
     }
+    if (!Number.isFinite(minLevel) || minLevel < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "minimumLevel must be a non-negative number.",
+      });
+    }
 
     const lot = await InventoryLot.create({
       drugId: Number(drugId),
       lotNumber: String(lotNumber).trim(),
       expiryDate: String(expiryDate).slice(0, 10),
+      minimumLevel: minLevel,
       quantityOnHand: qty,
     });
 
@@ -166,11 +188,22 @@ export const updateInventoryLot = async (req, res) => {
       }
       updates.quantityOnHand = qty;
     }
+    if (req.body.minimumLevel !== undefined) {
+      const minLevel = Number(req.body.minimumLevel);
+      if (!Number.isFinite(minLevel) || minLevel < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "minimumLevel must be a non-negative number.",
+        });
+      }
+      updates.minimumLevel = minLevel;
+    }
 
     if (!Object.keys(updates).length) {
       return res.status(400).json({
         success: false,
-        message: "Provide at least one of: lotNumber, expiryDate, quantityOnHand.",
+        message:
+          "Provide at least one of: lotNumber, expiryDate, quantityOnHand, minimumLevel.",
       });
     }
 

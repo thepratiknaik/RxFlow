@@ -36,6 +36,12 @@ const AuditLog = sequelize.define(
       allowNull: false,
       field: "entity_id",
     },
+    auditType: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "general",
+      field: "audit_type",
+    },
     changes: {
       type: DataTypes.JSONB,
       allowNull: true,
@@ -53,7 +59,9 @@ AuditLog.beforeValidate(async (entry) => {
   if (!entry.pharmacyId) {
     const pharmacyId = await getDefaultPharmacyId();
     if (!pharmacyId) {
-      throw new Error("At least one pharmacy row must exist before creating audit logs.");
+      throw new Error(
+        "At least one pharmacy row must exist before creating audit logs.",
+      );
     }
     entry.pharmacyId = pharmacyId;
   }

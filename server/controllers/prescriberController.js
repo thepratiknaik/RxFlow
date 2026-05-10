@@ -3,6 +3,10 @@ import Prescriber from "../models/Prescriber.js";
 import Prescription from "../models/Prescription.js";
 import Patient from "../models/Patient.js";
 import {
+  getReviewStatus,
+  listPrescriptionReviewRecords,
+} from "../services/prescriptionNotificationService.js";
+import {
   buildActorContext,
   writeAuditLog,
 } from "../services/auditLogService.js";
@@ -12,10 +16,7 @@ const toLimit = (value, fallback = 25, max = 100) =>
 
 const serializePrescriber = (prescriber) => {
   const plain = prescriber?.toJSON ? prescriber.toJSON() : prescriber;
-  return {
-    ...plain,
-    email: null,
-  };
+  return plain;
 };
 
 export const listPrescribers = async (req, res) => {
@@ -30,6 +31,7 @@ export const listPrescribers = async (req, res) => {
             { firstName: { [Op.iLike]: `%${q}%` } },
             { lastName: { [Op.iLike]: `%${q}%` } },
             { contact: { [Op.iLike]: `%${q}%` } },
+            { email: { [Op.iLike]: `%${q}%` } },
             { npi: { [Op.iLike]: `%${q}%` } },
           ],
         }
@@ -62,12 +64,12 @@ export const listPrescribers = async (req, res) => {
 
 export const createPrescriber = async (req, res) => {
   try {
-    const { name, contact, npi } = req.body || {};
+    const { name, contact, email, npi } = req.body || {};
 
-    if (!name || !contact || !npi) {
+    if (!name || !contact || !email || !npi) {
       return res.status(400).json({
         success: false,
-        message: "name, contact, and npi are required.",
+        message: "name, contact, email, and npi are required.",
       });
     }
 
@@ -93,6 +95,7 @@ export const createPrescriber = async (req, res) => {
     const prescriber = await Prescriber.create({
       name: String(name).trim(),
       contact: String(contact).trim(),
+      email: String(email).trim().toLowerCase(),
       npi: normalizedNpi,
     });
 
@@ -132,19 +135,45 @@ export const getPrescriberHistory = async (req, res) => {
       ],
       order: [["created_at", "DESC"]],
     });
+    const historyWithReview = await Promise.all(
+      history.map(async (item) => {
+        const serialized = item.toJSON ? item.toJSON() : item;
+        const reviewHistory = await listPrescriptionReviewRecords(item.id);
+        const latestReview = reviewHistory[0] || null;
+        return {
+          ...serialized,
+          reviewHistory: reviewHistory.map((record) => ({
+            ...record,
+            status: getReviewStatus(record),
+          })),
+          latestReview,
+          reviewSummary: {
+            latestStatus: getReviewStatus(latestReview),
+            latestSentAt: latestReview?.sentAt || null,
+            latestReviewedAt: latestReview?.usedAt || null,
+          },
+        };
+      }),
+    );
+    const counts = historyWithReview.reduce(
+      (acc, item) => {
+        const status = item.reviewSummary?.latestStatus || "not_sent";
+        if (status === "approved") acc.approved += 1;
+        else if (status === "rejected") acc.rejected += 1;
+        else if (status === "pending") acc.pending += 1;
+        else if (status === "expired") acc.expired += 1;
+        else acc.notSent += 1;
+        return acc;
+      },
+      { approved: 0, rejected: 0, pending: 0, expired: 0, notSent: 0 },
+    );
 
     return res.status(200).json({
       success: true,
       data: {
         prescriber: serializePrescriber(prescriber),
-        counts: {
-          approved: 0,
-          rejected: 0,
-          pending: 0,
-          expired: 0,
-          notSent: history.length,
-        },
-        history,
+        counts,
+        history: historyWithReview,
       },
     });
   } catch (error) {
@@ -173,6 +202,11 @@ export const updatePrescriber = async (req, res) => {
     }
     if (req.body.contact !== undefined) {
       updates.contact = String(req.body.contact).trim();
+    }
+    if (req.body.email !== undefined) {
+      updates.email = req.body.email
+        ? String(req.body.email).trim().toLowerCase()
+        : null;
     }
     if (req.body.npi !== undefined) {
       const normalizedNpi = String(req.body.npi).trim();

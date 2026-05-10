@@ -30,6 +30,10 @@ const Prescriber = sequelize.define(
       type: DataTypes.STRING,
       field: "contact_details",
     },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     name: {
       type: DataTypes.VIRTUAL,
       get() {
@@ -39,12 +43,6 @@ const Prescriber = sequelize.define(
         const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
         this.setDataValue("firstName", parts.shift() || "Unknown");
         this.setDataValue("lastName", parts.join(" ") || "Prescriber");
-      },
-    },
-    email: {
-      type: DataTypes.VIRTUAL,
-      get() {
-        return null;
       },
     },
   },

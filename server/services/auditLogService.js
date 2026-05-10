@@ -49,18 +49,29 @@ export const writeAuditLog = async ({
   actorRole = null,
 }) => {
   try {
-    const normalizedAction = String(action || "").trim().toLowerCase();
-    const actionType =
-      normalizedAction.includes("delete")
-        ? "DELETE"
-        : normalizedAction.includes("update")
-          ? "UPDATE"
-          : "CREATE";
+    const normalizedAction = String(action || "")
+      .trim()
+      .toLowerCase();
+    const normalizedEntityType = String(entityType || "")
+      .trim()
+      .toLowerCase();
+    const actionType = normalizedAction.includes("delete")
+      ? "DELETE"
+      : normalizedAction.includes("update")
+        ? "UPDATE"
+        : "CREATE";
+    const auditType =
+      normalizedEntityType === "patient"
+        ? "patient"
+        : normalizedEntityType === "drug"
+          ? "drug_pull"
+          : "general";
 
     await AuditLog.create({
       pharmacyId: await getDefaultPharmacyId(),
       userId: actorUserId || 1,
       actionType,
+      auditType,
       entityTable: String(entityType || "").trim(),
       entityId:
         entityId != null && Number.isFinite(Number(entityId))

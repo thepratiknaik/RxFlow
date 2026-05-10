@@ -44,10 +44,8 @@ const User = sequelize.define(
       field: "is_active",
     },
     fullname: {
-      type: DataTypes.VIRTUAL,
-      get() {
-        return String(this.email || "").split("@")[0] || "User";
-      },
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     lastlogin: {
       type: DataTypes.VIRTUAL,

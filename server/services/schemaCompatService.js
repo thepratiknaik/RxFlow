@@ -19,6 +19,7 @@ const PRESCRIPTION_STATUS_LABELS = {
   in_process: "In Process",
   ready: "Ready",
   picked_up: "Picked Up",
+  cancelled: "Cancelled",
 };
 
 const PRESCRIPTION_STATUS_REVERSE = {
@@ -26,6 +27,8 @@ const PRESCRIPTION_STATUS_REVERSE = {
   "in process": "in_process",
   ready: "ready",
   "picked up": "picked_up",
+  cancelled: "cancelled",
+  canceled: "cancelled",
 };
 
 const normalize = (value) => String(value || "").trim();
@@ -137,6 +140,8 @@ export const ensureDrugByDescriptor = async ({
   ndcCode = null,
   brandName = null,
   genericName = null,
+  dosageForm = null,
+  route = null,
 } = {}) => {
   if (drugId) {
     return Number(drugId);
@@ -159,6 +164,8 @@ export const ensureDrugByDescriptor = async ({
 
   const normalizedBrand = normalize(brandName);
   const normalizedGeneric = normalize(genericName || brandName);
+  const normalizedDosageForm = normalize(dosageForm);
+  const normalizedRoute = normalize(route);
 
   const existing = await sequelize.query(
     `
@@ -184,8 +191,8 @@ export const ensureDrugByDescriptor = async ({
 
   const inserted = await sequelize.query(
     `
-      INSERT INTO drug (ndc_code, brand_name, generic_name, is_controlled)
-      VALUES (:ndcCode, :brandName, :genericName, false)
+      INSERT INTO drug (ndc_code, brand_name, generic_name, dosage_form, route, is_controlled)
+      VALUES (:ndcCode, :brandName, :genericName, :dosageForm, :route, false)
       RETURNING drug_id
     `,
     {
@@ -194,6 +201,8 @@ export const ensureDrugByDescriptor = async ({
           normalize(ndcCode) || `TMP-${String(Date.now()).slice(-8).padStart(8, "0")}`,
         brandName: normalizedBrand || normalizedGeneric || "Unknown Drug",
         genericName: normalizedGeneric || normalizedBrand || "Unknown Drug",
+        dosageForm: normalizedDosageForm || null,
+        route: normalizedRoute || null,
       },
       type: QueryTypes.INSERT,
       plain: true,
@@ -208,12 +217,14 @@ export const ensurePrescriberByDescriptor = async ({
   npi = null,
   name = null,
   contact = null,
+  email = null,
 } = {}) => {
   if (prescriberId) {
     return Number(prescriberId);
   }
 
   const normalizedNpi = normalize(npi);
+  const normalizedEmail = normalize(email).toLowerCase();
   if (normalizedNpi) {
     const existing = await sequelize.query(
       `SELECT prescriber_id FROM prescriber WHERE npi_number = :npi LIMIT 1`,
@@ -235,8 +246,8 @@ export const ensurePrescriberByDescriptor = async ({
 
   const inserted = await sequelize.query(
     `
-      INSERT INTO prescriber (npi_number, first_name, last_name, contact_details)
-      VALUES (:npi, :firstName, :lastName, :contact)
+      INSERT INTO prescriber (npi_number, first_name, last_name, contact_details, email)
+      VALUES (:npi, :firstName, :lastName, :contact, :email)
       RETURNING prescriber_id
     `,
     {
@@ -245,6 +256,7 @@ export const ensurePrescriberByDescriptor = async ({
         firstName,
         lastName,
         contact: normalize(contact) || null,
+        email: normalizedEmail || null,
       },
       type: QueryTypes.INSERT,
       plain: true,

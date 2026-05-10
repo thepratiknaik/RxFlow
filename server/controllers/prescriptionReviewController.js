@@ -2,6 +2,8 @@ import Prescription from "../models/Prescription.js";
 import Patient from "../models/Patient.js";
 import Prescriber from "../models/Prescriber.js";
 import {
+  getReviewStatus,
+  markReviewTokenUsed,
   createPrescriptionReviewInvite,
   resolveReviewTokenRecord,
 } from "../services/prescriptionNotificationService.js";
@@ -40,7 +42,7 @@ const buildReviewPayload = async (prescription, tokenRecord) => {
             id: prescriber.id,
             name: prescriber.name,
             contact: prescriber.contact,
-            email: null,
+            email: prescriber.email || null,
             npi: prescriber.npi,
           }
         : null,
@@ -49,11 +51,12 @@ const buildReviewPayload = async (prescription, tokenRecord) => {
       ? {
           id: tokenRecord.id,
           expiresAt: tokenRecord.expiresAt,
-          usedAt: null,
-          decision: null,
+          usedAt: tokenRecord.usedAt,
+          decision: tokenRecord.decision,
+          status: getReviewStatus(tokenRecord),
         }
       : null,
-    tokenExpired: false,
+    tokenExpired: getReviewStatus(tokenRecord) === "expired",
   };
 };
 
@@ -115,8 +118,26 @@ const performReviewDecision = async (req, res, decision) => {
       });
     }
 
+    if (tokenRecord.usedAt || tokenRecord.decision) {
+      return res.status(409).json({
+        success: false,
+        message: "This review link has already been used.",
+      });
+    }
+
+    if (getReviewStatus(tokenRecord) === "expired") {
+      return res.status(410).json({
+        success: false,
+        message: "This review link has expired.",
+      });
+    }
+
     prescription.status = REVIEW_DECISION_STATUS[decision];
     await prescription.save();
+    const consumedToken = await markReviewTokenUsed({
+      tokenRecordId: tokenRecord.id,
+      decision,
+    });
 
     await writeAuditLog({
       entityType: "prescription",
@@ -126,8 +147,8 @@ const performReviewDecision = async (req, res, decision) => {
       metadata: {
         prescriptionId: prescription.id,
         decision,
-        recipientEmail: tokenRecord.recipientEmail,
-        recipientName: tokenRecord.recipientName,
+        recipientEmail: consumedToken.recipientEmail,
+        recipientName: consumedToken.recipientName,
       },
       ...buildActorContext(req),
     });
@@ -148,7 +169,7 @@ const performReviewDecision = async (req, res, decision) => {
         decision === "approved"
           ? "Prescription approved successfully."
           : "Prescription rejected successfully.",
-      data: await buildReviewPayload(refreshedPrescription, tokenRecord),
+      data: await buildReviewPayload(refreshedPrescription, consumedToken),
     });
   } catch (error) {
     return res.status(500).json({
@@ -199,7 +220,7 @@ export const sendPrescriptionForReview = async (req, res) => {
     const invite = await createPrescriptionReviewInvite({
       prescriptionId: prescription.id,
       prescriberName: prescriber?.name || "Prescriber",
-      prescriberEmail: null,
+      prescriberEmail: prescriber?.email || null,
       prescriptionSummary: {
         medicationDisplay: `Drug ${prescription.drugId}`,
         quantityValue: prescription.quantity,

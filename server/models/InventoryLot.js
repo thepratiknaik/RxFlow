@@ -36,17 +36,17 @@ const InventoryLot = sequelize.define(
       allowNull: false,
       field: "expiration_date",
     },
+    minimumLevel: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      field: "minimum_level",
+    },
     quantityOnHand: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
       field: "quantity_on_hand",
-    },
-    minimumLevel: {
-      type: DataTypes.VIRTUAL,
-      get() {
-        return 0;
-      },
     },
   },
   {

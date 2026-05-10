@@ -5,6 +5,11 @@ import Drug from "../models/Drug.js";
 import User from "../models/User.js";
 import { syncMedicationRequestsFromFhir } from "../services/fhirPrescriptionService.js";
 import {
+  buildPrescriptionReviewSummary,
+  getReviewStatus,
+  listPrescriptionReviewRecords,
+} from "../services/prescriptionNotificationService.js";
+import {
   buildActorContext,
   writeAuditLog,
 } from "../services/auditLogService.js";
@@ -24,6 +29,7 @@ const STATUS_MAP = {
   "In Process": "in_process",
   Ready: "ready",
   "Picked Up": "picked_up",
+  Cancelled: "cancelled",
 };
 
 const STATUS_MAP_REVERSE = {
@@ -31,6 +37,7 @@ const STATUS_MAP_REVERSE = {
   in_process: "In Process",
   ready: "Ready",
   picked_up: "Picked Up",
+  cancelled: "Cancelled",
 };
 
 const hasClientProvidedPrescriptionId = (payload) =>
@@ -60,6 +67,12 @@ const serializePrescription = async (prescription) => {
   const verifiedBy = prescription.verifiedById
     ? await User.findByPk(prescription.verifiedById)
     : null;
+  const reviewRecords = await listPrescriptionReviewRecords(prescription.id);
+  const reviewHistory = reviewRecords.map((record) => ({
+    ...record,
+    status: getReviewStatus(record),
+  }));
+  const latestReview = reviewHistory[0] || null;
 
   return {
     ...plain,
@@ -67,16 +80,9 @@ const serializePrescription = async (prescription) => {
     medicationDisplay:
       drug?.brandname || drug?.genericname || drug?.productndc || `Drug ${prescription.drugId}`,
     quantityValue: prescription.quantity,
-    reviewHistory: [],
-    latestReview: null,
-    reviewSummary: {
-      hasBeenSent: false,
-      totalSent: 0,
-      latestStatus: "not_sent",
-      latestDecision: null,
-      latestSentAt: null,
-      latestReviewedAt: null,
-    },
+    reviewHistory,
+    latestReview,
+    reviewSummary: buildPrescriptionReviewSummary(reviewRecords),
     fhirRaw: {
       pharmacy_id: prescription.pharmacyId,
       prescriber_id: prescriber?.npi || String(prescription.prescriberId),

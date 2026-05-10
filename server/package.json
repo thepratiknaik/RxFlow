@@ -9,6 +9,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "db:bootstrap": "node check-schema.js",
+    "db:reset": "node reset-db.js",
+    "db:schema": "node check-schema.js",
     "test:db": "node test-db.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

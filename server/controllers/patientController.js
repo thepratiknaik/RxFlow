@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import Patient from "../models/Patient.js";
 import PatientInsurance from "../models/PatientInsurance.js";
 import AuditLog from "../models/AuditLog.js";
@@ -18,19 +18,32 @@ const serializePatient = (patient) => {
   return {
     ...plain,
     patientNumber: `PT${String(plain.id || "").padStart(6, "0")}`,
-    middleName: null,
-    gender: null,
-    email: null,
-    phonePrimary: null,
-    phoneSecondary: null,
-    addressLine1: null,
-    addressLine2: null,
-    city: null,
-    state: null,
-    zipCode: null,
-    mrn: null,
-    notes: null,
+    middleName: plain.middleName || null,
+    gender: plain.gender || null,
+    email: plain.email || null,
+    phonePrimary: plain.phonePrimary || null,
+    phoneSecondary: plain.phoneSecondary || null,
+    addressLine1: plain.addressLine1 || null,
+    addressLine2: plain.addressLine2 || null,
+    city: plain.city || null,
+    state: plain.state || null,
+    zipCode: plain.zipCode || null,
+    mrn: plain.mrn || null,
+    notes: plain.notes || null,
   };
+};
+
+const normalizeOptionalText = (value) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value == null) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  return normalized ? normalized : null;
 };
 
 export const searchPatients = async (req, res) => {
@@ -44,6 +57,13 @@ export const searchPatients = async (req, res) => {
           [Op.or]: [
             { firstName: { [Op.iLike]: `%${searchTerm}%` } },
             { lastName: { [Op.iLike]: `%${searchTerm}%` } },
+            { email: { [Op.iLike]: `%${searchTerm}%` } },
+            { phonePrimary: { [Op.iLike]: `%${searchTerm}%` } },
+            { mrn: { [Op.iLike]: `%${searchTerm}%` } },
+            Sequelize.where(
+              Sequelize.cast(Sequelize.col("patient_id"), "TEXT"),
+              { [Op.iLike]: `%${searchTerm}%` },
+            ),
           ],
         }
       : {};
@@ -99,7 +119,23 @@ export const getPatient = async (req, res) => {
 
 export const createPatient = async (req, res) => {
   try {
-    const { firstName, lastName, dateOfBirth } = req.body || {};
+    const {
+      firstName,
+      lastName,
+      middleName,
+      dateOfBirth,
+      gender,
+      email,
+      phonePrimary,
+      phoneSecondary,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      zipCode,
+      mrn,
+      notes,
+    } = req.body || {};
 
     if (!firstName || !lastName || !dateOfBirth) {
       return res.status(400).json({
@@ -111,7 +147,19 @@ export const createPatient = async (req, res) => {
     const patient = await Patient.create({
       firstName: String(firstName).trim(),
       lastName: String(lastName).trim(),
+      middleName: normalizeOptionalText(middleName),
       dateOfBirth: String(dateOfBirth).slice(0, 10),
+      gender: normalizeOptionalText(gender),
+      email: normalizeOptionalText(email),
+      phonePrimary: normalizeOptionalText(phonePrimary),
+      phoneSecondary: normalizeOptionalText(phoneSecondary),
+      addressLine1: normalizeOptionalText(addressLine1),
+      addressLine2: normalizeOptionalText(addressLine2),
+      city: normalizeOptionalText(city),
+      state: normalizeOptionalText(state),
+      zipCode: normalizeOptionalText(zipCode),
+      mrn: normalizeOptionalText(mrn),
+      notes: normalizeOptionalText(notes),
     });
 
     await writeAuditLog({
@@ -155,16 +203,53 @@ export const updatePatient = async (req, res) => {
     if (req.body.lastName !== undefined) {
       updates.lastName = String(req.body.lastName).trim();
     }
+    if (req.body.middleName !== undefined) {
+      updates.middleName = normalizeOptionalText(req.body.middleName);
+    }
     if (req.body.dateOfBirth !== undefined) {
       updates.dateOfBirth = req.body.dateOfBirth
         ? String(req.body.dateOfBirth).slice(0, 10)
         : null;
     }
+    if (req.body.gender !== undefined) {
+      updates.gender = normalizeOptionalText(req.body.gender);
+    }
+    if (req.body.email !== undefined) {
+      updates.email = normalizeOptionalText(req.body.email);
+    }
+    if (req.body.phonePrimary !== undefined) {
+      updates.phonePrimary = normalizeOptionalText(req.body.phonePrimary);
+    }
+    if (req.body.phoneSecondary !== undefined) {
+      updates.phoneSecondary = normalizeOptionalText(req.body.phoneSecondary);
+    }
+    if (req.body.addressLine1 !== undefined) {
+      updates.addressLine1 = normalizeOptionalText(req.body.addressLine1);
+    }
+    if (req.body.addressLine2 !== undefined) {
+      updates.addressLine2 = normalizeOptionalText(req.body.addressLine2);
+    }
+    if (req.body.city !== undefined) {
+      updates.city = normalizeOptionalText(req.body.city);
+    }
+    if (req.body.state !== undefined) {
+      updates.state = normalizeOptionalText(req.body.state);
+    }
+    if (req.body.zipCode !== undefined) {
+      updates.zipCode = normalizeOptionalText(req.body.zipCode);
+    }
+    if (req.body.mrn !== undefined) {
+      updates.mrn = normalizeOptionalText(req.body.mrn);
+    }
+    if (req.body.notes !== undefined) {
+      updates.notes = normalizeOptionalText(req.body.notes);
+    }
 
     if (!Object.keys(updates).length) {
       return res.status(400).json({
         success: false,
-        message: "Provide at least one of: firstName, lastName, dateOfBirth.",
+        message:
+          "Provide at least one supported patient field to update.",
       });
     }
 

@@ -51,7 +51,8 @@ INSERT INTO prescription_status (status, description) VALUES
     ('New',         'Prescription has been received but not yet processed'),
     ('In Process',  'Prescription is currently being prepared'),
     ('Ready',       'Prescription is ready for patient pickup'),
-    ('Picked Up',   'Prescription has been collected by the patient');
+    ('Picked Up',   'Prescription has been collected by the patient'),
+    ('Cancelled',   'Prescription has been cancelled and is no longer active');
 
 INSERT INTO invoice_status (status, description) VALUES
     ('Pending',     'Invoice has been issued but not yet paid'),
@@ -81,6 +82,7 @@ CREATE TABLE "user" (
     pharmacy_id     INT,
     role_id         INT             NOT NULL,
     email           VARCHAR(255)    NOT NULL UNIQUE,
+    fullname        VARCHAR(255),
     password_hash   VARCHAR(512)    NOT NULL,
     is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMP       NOT NULL DEFAULT NOW(),
@@ -97,7 +99,19 @@ CREATE TABLE patient (
     pharmacy_id     INT             NOT NULL,
     first_name      VARCHAR(255)    NOT NULL,
     last_name       VARCHAR(255)    NOT NULL,
+    middle_name     VARCHAR(255),
     dob             DATE            NOT NULL,
+    gender          VARCHAR(50),
+    email           VARCHAR(255),
+    phone_primary   VARCHAR(50),
+    phone_secondary VARCHAR(50),
+    address_line1   VARCHAR(255),
+    address_line2   VARCHAR(255),
+    city            VARCHAR(100),
+    state           VARCHAR(50),
+    zip_code        VARCHAR(20),
+    mrn             VARCHAR(100),
+    notes           TEXT,
     created_at      TIMESTAMP       NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMP       NOT NULL DEFAULT NOW(),
 
@@ -137,6 +151,7 @@ CREATE TABLE prescriber (
     first_name      VARCHAR(255)    NOT NULL,
     last_name       VARCHAR(255)    NOT NULL,
     contact_details VARCHAR(255),
+    email           VARCHAR(255),
     created_at      TIMESTAMP       NOT NULL DEFAULT NOW()
 );
 
@@ -145,6 +160,8 @@ CREATE TABLE drug (
     ndc_code        VARCHAR(20)     NOT NULL UNIQUE,
     brand_name      VARCHAR(255)    NOT NULL,
     generic_name    VARCHAR(255)    NOT NULL,
+    dosage_form     VARCHAR(255),
+    route           VARCHAR(255),
     is_controlled   BOOLEAN         NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMP       NOT NULL DEFAULT NOW()
 );
@@ -155,6 +172,8 @@ CREATE TABLE inventory_lot (
     drug_id             INT             NOT NULL,
     lot_number          VARCHAR(255)    NOT NULL,
     expiration_date     DATE            NOT NULL,
+    minimum_level       INT             NOT NULL DEFAULT 0
+                            CHECK (minimum_level >= 0),
     quantity_on_hand    INT             NOT NULL DEFAULT 0
                             CHECK (quantity_on_hand >= 0),
 
@@ -230,6 +249,8 @@ CREATE TABLE audit_log (
     user_id         INT             NOT NULL,
     action_type     VARCHAR(50)     NOT NULL
                         CHECK (action_type IN ('CREATE', 'UPDATE', 'DELETE')),
+    audit_type      VARCHAR(50)     NOT NULL DEFAULT 'general'
+                        CHECK (audit_type IN ('general', 'patient', 'drug_pull')),
     entity_table    VARCHAR(100)    NOT NULL,
     entity_id       INT             NOT NULL,
     changes         JSONB,
@@ -239,6 +260,26 @@ CREATE TABLE audit_log (
         FOREIGN KEY (pharmacy_id) REFERENCES pharmacy(pharmacy_id),
     CONSTRAINT fk_audit_user
         FOREIGN KEY (user_id) REFERENCES "user"(user_id)
+);
+
+CREATE TABLE prescription_review_tokens (
+    id              UUID            PRIMARY KEY,
+    prescription_id INT             NOT NULL,
+    token_hash      VARCHAR(255)    NOT NULL UNIQUE,
+    recipient_email VARCHAR(255)    NOT NULL,
+    recipient_name  VARCHAR(255),
+    review_url      TEXT            NOT NULL,
+    sent_at         TIMESTAMP,
+    expires_at      TIMESTAMP       NOT NULL,
+    used_at         TIMESTAMP,
+    decision        VARCHAR(20)
+                        CHECK (decision IN ('approved', 'rejected')),
+    createdat       TIMESTAMP       NOT NULL DEFAULT NOW(),
+    updatedat       TIMESTAMP       NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_review_token_prescription
+        FOREIGN KEY (prescription_id) REFERENCES prescription(prescription_id)
+            ON DELETE CASCADE
 );
 
 
