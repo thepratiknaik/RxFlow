@@ -5,12 +5,12 @@ import User from "../models/User.js";
 // @access  Private
 export const updateProfile = async (req, res) => {
   try {
-    const { fullname, email } = req.body;
+    const { email } = req.body;
 
-    if (!fullname && !email) {
+    if (!email) {
       return res.status(400).json({
         success: false,
-        message: "At least one field is required: fullname or email",
+        message: "At least one updatable field is required: email",
       });
     }
 
@@ -36,10 +36,6 @@ export const updateProfile = async (req, res) => {
       user.email = email;
     }
 
-    if (fullname) {
-      user.fullname = fullname;
-    }
-
     await user.save();
 
     res.status(200).json({
@@ -50,10 +46,11 @@ export const updateProfile = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
         lastlogin: user.lastlogin,
-        createdat: user.createdat,
-        updatedat: user.updatedat,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
       },
     });
   } catch (error) {

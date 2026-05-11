@@ -7,6 +7,8 @@ import {
   resetPassword,
   listUsers,
   updateUserRole,
+  createUser,
+  setupPharmacy,
 } from "../controllers/authController.js";
 import { authorize, verifyToken } from "../middleware/auth.js";
 
@@ -23,6 +25,13 @@ router.post("/login", login);
 router.post("/reset-password", resetPassword);
 
 // Protected routes
+router.post(
+  "/setup-pharmacy",
+  verifyToken,
+  authorize(["admin"]),
+  setupPharmacy,
+);
+router.post("/users", verifyToken, authorize(["admin"]), createUser);
 router.get("/users", verifyToken, authorize(["admin"]), listUsers);
 router.patch(
   "/users/:id/role",

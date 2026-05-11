@@ -3,10 +3,12 @@ export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
   SIGNUP: "/signup",
+  ONBOARDING: "/onboarding",
   DASHBOARD: "/dashboard",
   RESET_PASSWORD: "/reset-password",
   PROFILE: "/profile",
   ADMIN_USERS: "/admin/users",
+  BILLING: "/billing",
   PATIENTS: "/patients",
   PRESCRIPTIONS: "/prescriptions",
   PRESCRIPTION_REVIEW: "/prescription-review",
@@ -101,11 +103,18 @@ export const API_ENDPOINTS = {
       "/reset-password",
     ),
     USERS: normalizePath("/auth/users"),
+    CREATE_USER: normalizePath("/auth/users"),
+    SETUP_PHARMACY: normalizePath("/auth/setup-pharmacy"),
     USER_ROLE: (id) => normalizePath(`/auth/users/${id}/role`),
   },
   PROFILE: {
     UPDATE: normalizePath("/profile"),
     CHANGE_PASSWORD: normalizePath("/profile/password"),
+  },
+  PHARMACY: {
+    DETAIL: normalizePath("/pharmacy"),
+    UPDATE: normalizePath("/pharmacy"),
+    SETUP: normalizePath("/pharmacy/setup"),
   },
   DRUGS: {
     LIST: normalizePath("/drugs"),
@@ -129,6 +138,12 @@ export const API_ENDPOINTS = {
     INSURANCE: (id) => normalizePath(`/prescriptions/${id}/insurance`),
     SEND_FOR_REVIEW: (id) =>
       normalizePath(`/prescriptions/${id}/send-for-review`),
+    DRUG_AVAILABILITY: (id) => normalizePath(`/prescriptions/${id}/drug-availability`),
+    LOTS: (id) => normalizePath(`/prescriptions/${id}/lots`),
+    ASSIGN_ITEM_LOT: (id, itemId) => normalizePath(`/prescriptions/${id}/items/${itemId}/assign-lot`),
+    MARK_READY: (id) => normalizePath(`/prescriptions/${id}/ready`),
+    MARK_PICKED_UP: (id) => normalizePath(`/prescriptions/${id}/picked-up`),
+    CANCEL: (id) => normalizePath(`/prescriptions/${id}/cancel`),
     REVIEW: (token) => normalizePath(`/prescriptions/review/${token}`),
     REVIEW_APPROVE: (token) =>
       normalizePath(`/prescriptions/review/${token}/approve`),
@@ -146,6 +161,13 @@ export const API_ENDPOINTS = {
   },
   AUDIT_LOGS: {
     LIST: normalizePath("/audit-logs"),
+  },
+  BILLING: {
+    PLANS: normalizePath("/billing/plans"),
+    SUBSCRIPTION: normalizePath("/billing/subscription"),
+    CHECKOUT: normalizePath("/billing/checkout"),
+    PORTAL: normalizePath("/billing/portal"),
+    INVOICES: normalizePath("/billing/invoices"),
   },
 };
 

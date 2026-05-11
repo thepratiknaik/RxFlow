@@ -5,41 +5,52 @@ const Prescriber = sequelize.define(
   "Prescriber",
   {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
       primaryKey: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    contact: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-      validate: {
-        isEmail: true,
-      },
+      autoIncrement: true,
+      field: "prescriber_id",
     },
     npi: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
-      validate: {
-        is: /^\d{10}$/,
+      field: "npi_number",
+    },
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: "first_name",
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: "last_name",
+    },
+    contact: {
+      type: DataTypes.STRING,
+      field: "contact_details",
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    name: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return `${this.firstName || ""} ${this.lastName || ""}`.trim();
+      },
+      set(value) {
+        const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+        this.setDataValue("firstName", parts.shift() || "Unknown");
+        this.setDataValue("lastName", parts.join(" ") || "Prescriber");
       },
     },
   },
   {
-    tableName: "prescribers",
+    tableName: "prescriber",
     timestamps: true,
-    createdAt: "createdat",
-    updatedAt: "updatedat",
-    underscored: false,
+    createdAt: "created_at",
+    updatedAt: false,
   },
 );
 

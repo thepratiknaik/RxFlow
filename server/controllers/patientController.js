@@ -1,7 +1,7 @@
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import Patient from "../models/Patient.js";
-import PatientAuditLog from "../models/PatientAudit.js";
 import PatientInsurance from "../models/PatientInsurance.js";
+import AuditLog from "../models/AuditLog.js";
 import {
   buildActorContext,
   writeAuditLog,
@@ -13,57 +13,39 @@ const toLimit = (value, fallback = 25, max = 100) =>
 const toOffset = (page = 1, limit = 25) =>
   (Math.max(Number(page), 1) - 1) * limit;
 
-const PATIENT_NUMBER_PREFIX = "PT";
-
-const generatePatientNumber = async () => {
-  const latestPatient = await Patient.findOne({
-    where: {
-      patientNumber: {
-        [Op.iLike]: `${PATIENT_NUMBER_PREFIX}%`,
-      },
-    },
-    order: [["createdat", "DESC"]],
-  });
-
-  const latestNumber = latestPatient?.patientNumber || "";
-  const numericPortion = Number(
-    String(latestNumber).replace(
-      new RegExp(`^${PATIENT_NUMBER_PREFIX}`, "i"),
-      "",
-    ),
-  );
-  const nextNumber = Number.isFinite(numericPortion) ? numericPortion + 1 : 1;
-
-  return `${PATIENT_NUMBER_PREFIX}${String(nextNumber).padStart(6, "0")}`;
+const serializePatient = (patient) => {
+  const plain = patient?.toJSON ? patient.toJSON() : patient;
+  return {
+    ...plain,
+    patientNumber: `PT${String(plain.id || "").padStart(6, "0")}`,
+    middleName: plain.middleName || null,
+    gender: plain.gender || null,
+    email: plain.email || null,
+    phonePrimary: plain.phonePrimary || null,
+    phoneSecondary: plain.phoneSecondary || null,
+    addressLine1: plain.addressLine1 || null,
+    addressLine2: plain.addressLine2 || null,
+    city: plain.city || null,
+    state: plain.state || null,
+    zipCode: plain.zipCode || null,
+    mrn: plain.mrn || null,
+    notes: plain.notes || null,
+  };
 };
 
-/**
- * Log audit entry for field change
- */
-const logAuditEntry = async (
-  patientId,
-  fieldName,
-  oldValue,
-  newValue,
-  changedByUserId,
-) => {
-  try {
-    await PatientAuditLog.create({
-      patientId,
-      fieldName,
-      oldValue: oldValue != null ? String(oldValue) : null,
-      newValue: newValue != null ? String(newValue) : null,
-      changedByUserId,
-    });
-  } catch (error) {
-    console.error("Audit logging error:", error);
+const normalizeOptionalText = (value) => {
+  if (value === undefined) {
+    return undefined;
   }
+
+  if (value == null) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  return normalized ? normalized : null;
 };
 
-/**
- * Search patients
- * Query params: q (search term), page, limit
- */
 export const searchPatients = async (req, res) => {
   try {
     const { q: searchTerm = "", page = 1 } = req.query;
@@ -77,8 +59,11 @@ export const searchPatients = async (req, res) => {
             { lastName: { [Op.iLike]: `%${searchTerm}%` } },
             { email: { [Op.iLike]: `%${searchTerm}%` } },
             { phonePrimary: { [Op.iLike]: `%${searchTerm}%` } },
-            { patientNumber: { [Op.iLike]: `%${searchTerm}%` } },
             { mrn: { [Op.iLike]: `%${searchTerm}%` } },
+            Sequelize.where(
+              Sequelize.cast(Sequelize.col("patient_id"), "TEXT"),
+              { [Op.iLike]: `%${searchTerm}%` },
+            ),
           ],
         }
       : {};
@@ -87,12 +72,12 @@ export const searchPatients = async (req, res) => {
       where: whereClause,
       limit,
       offset,
-      order: [["createdat", "DESC"]],
+      order: [["created_at", "DESC"]],
     });
 
     return res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map(serializePatient),
       pagination: {
         total: count,
         page: Number(page),
@@ -108,13 +93,9 @@ export const searchPatients = async (req, res) => {
   }
 };
 
-/**
- * Get patient by ID
- */
 export const getPatient = async (req, res) => {
   try {
     const { id } = req.params;
-
     const patient = await Patient.findByPk(id);
 
     if (!patient) {
@@ -126,7 +107,7 @@ export const getPatient = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: patient,
+      data: serializePatient(patient),
     });
   } catch (error) {
     return res.status(500).json({
@@ -136,9 +117,6 @@ export const getPatient = async (req, res) => {
   }
 };
 
-/**
- * Create a new patient
- */
 export const createPatient = async (req, res) => {
   try {
     const {
@@ -157,90 +135,46 @@ export const createPatient = async (req, res) => {
       zipCode,
       mrn,
       notes,
-    } = req.body;
+    } = req.body || {};
 
-    if (
-      !firstName ||
-      !lastName ||
-      !phonePrimary ||
-      !addressLine1 ||
-      !city ||
-      !state ||
-      !zipCode ||
-      !dateOfBirth
-    ) {
+    if (!firstName || !lastName || !dateOfBirth) {
       return res.status(400).json({
         success: false,
-        message:
-          "Missing required fields: firstName, lastName, dateOfBirth, phonePrimary, addressLine1, city, state, zipCode.",
+        message: "Missing required fields: firstName, lastName, dateOfBirth.",
       });
     }
 
-    const patientNumber = await generatePatientNumber();
-
     const patient = await Patient.create({
-      firstName,
-      lastName,
-      middleName,
-      dateOfBirth,
-      gender,
-      email,
-      phonePrimary,
-      phoneSecondary,
-      addressLine1,
-      addressLine2,
-      city,
-      state,
-      zipCode,
-      patientNumber,
-      mrn,
-      notes,
+      firstName: String(firstName).trim(),
+      lastName: String(lastName).trim(),
+      middleName: normalizeOptionalText(middleName),
+      dateOfBirth: String(dateOfBirth).slice(0, 10),
+      gender: normalizeOptionalText(gender),
+      email: normalizeOptionalText(email),
+      phonePrimary: normalizeOptionalText(phonePrimary),
+      phoneSecondary: normalizeOptionalText(phoneSecondary),
+      addressLine1: normalizeOptionalText(addressLine1),
+      addressLine2: normalizeOptionalText(addressLine2),
+      city: normalizeOptionalText(city),
+      state: normalizeOptionalText(state),
+      zipCode: normalizeOptionalText(zipCode),
+      mrn: normalizeOptionalText(mrn),
+      notes: normalizeOptionalText(notes),
     });
-
-    // Log creation as audit entries
-    const fieldsToLog = [
-      "firstName",
-      "lastName",
-      "middleName",
-      "dateOfBirth",
-      "gender",
-      "email",
-      "phonePrimary",
-      "phoneSecondary",
-      "addressLine1",
-      "addressLine2",
-      "city",
-      "state",
-      "zipCode",
-      "mrn",
-      "notes",
-    ];
-
-    for (const field of fieldsToLog) {
-      if (patient[field] != null) {
-        await logAuditEntry(
-          patient.id,
-          field,
-          null,
-          patient[field],
-          req.user?.id || null,
-        );
-      }
-    }
 
     await writeAuditLog({
       entityType: "patient",
       entityId: patient.id,
       action: "created",
       summary: `Created patient ${patient.firstName} ${patient.lastName}.`,
-      metadata: patient.toJSON(),
+      metadata: serializePatient(patient),
       ...buildActorContext(req),
     });
 
     return res.status(201).json({
       success: true,
       message: "Patient created successfully.",
-      data: patient,
+      data: serializePatient(patient),
     });
   } catch (error) {
     return res.status(500).json({
@@ -250,16 +184,9 @@ export const createPatient = async (req, res) => {
   }
 };
 
-/**
- * Update a patient
- */
 export const updatePatient = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = { ...req.body };
-
-    delete updates.patientNumber;
-
     const patient = await Patient.findByPk(id);
 
     if (!patient) {
@@ -269,22 +196,65 @@ export const updatePatient = async (req, res) => {
       });
     }
 
-    const oldValues = patient.toJSON();
-
-    await patient.update(updates);
-
-    // Log each field change
-    for (const [field, newValue] of Object.entries(updates)) {
-      if (oldValues[field] !== newValue) {
-        await logAuditEntry(
-          id,
-          field,
-          oldValues[field],
-          newValue,
-          req.user?.id || null,
-        );
-      }
+    const updates = {};
+    if (req.body.firstName !== undefined) {
+      updates.firstName = String(req.body.firstName).trim();
     }
+    if (req.body.lastName !== undefined) {
+      updates.lastName = String(req.body.lastName).trim();
+    }
+    if (req.body.middleName !== undefined) {
+      updates.middleName = normalizeOptionalText(req.body.middleName);
+    }
+    if (req.body.dateOfBirth !== undefined) {
+      updates.dateOfBirth = req.body.dateOfBirth
+        ? String(req.body.dateOfBirth).slice(0, 10)
+        : null;
+    }
+    if (req.body.gender !== undefined) {
+      updates.gender = normalizeOptionalText(req.body.gender);
+    }
+    if (req.body.email !== undefined) {
+      updates.email = normalizeOptionalText(req.body.email);
+    }
+    if (req.body.phonePrimary !== undefined) {
+      updates.phonePrimary = normalizeOptionalText(req.body.phonePrimary);
+    }
+    if (req.body.phoneSecondary !== undefined) {
+      updates.phoneSecondary = normalizeOptionalText(req.body.phoneSecondary);
+    }
+    if (req.body.addressLine1 !== undefined) {
+      updates.addressLine1 = normalizeOptionalText(req.body.addressLine1);
+    }
+    if (req.body.addressLine2 !== undefined) {
+      updates.addressLine2 = normalizeOptionalText(req.body.addressLine2);
+    }
+    if (req.body.city !== undefined) {
+      updates.city = normalizeOptionalText(req.body.city);
+    }
+    if (req.body.state !== undefined) {
+      updates.state = normalizeOptionalText(req.body.state);
+    }
+    if (req.body.zipCode !== undefined) {
+      updates.zipCode = normalizeOptionalText(req.body.zipCode);
+    }
+    if (req.body.mrn !== undefined) {
+      updates.mrn = normalizeOptionalText(req.body.mrn);
+    }
+    if (req.body.notes !== undefined) {
+      updates.notes = normalizeOptionalText(req.body.notes);
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Provide at least one supported patient field to update.",
+      });
+    }
+
+    const before = serializePatient(patient);
+    await patient.update(updates);
 
     await writeAuditLog({
       entityType: "patient",
@@ -292,8 +262,8 @@ export const updatePatient = async (req, res) => {
       action: "updated",
       summary: `Updated patient ${patient.firstName} ${patient.lastName}.`,
       metadata: {
-        before: oldValues,
-        after: patient.toJSON(),
+        before,
+        after: serializePatient(patient),
       },
       ...buildActorContext(req),
     });
@@ -301,7 +271,7 @@ export const updatePatient = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Patient updated successfully.",
-      data: patient,
+      data: serializePatient(patient),
     });
   } catch (error) {
     return res.status(500).json({
@@ -311,13 +281,9 @@ export const updatePatient = async (req, res) => {
   }
 };
 
-/**
- * Delete a patient
- */
 export const deletePatient = async (req, res) => {
   try {
     const { id } = req.params;
-
     const patient = await Patient.findByPk(id);
 
     if (!patient) {
@@ -327,12 +293,12 @@ export const deletePatient = async (req, res) => {
       });
     }
 
-    const snapshot = patient.toJSON();
+    const snapshot = serializePatient(patient);
     await patient.destroy();
 
     await writeAuditLog({
       entityType: "patient",
-      entityId: id,
+      entityId: Number(id),
       action: "deleted",
       summary: `Deleted patient ${snapshot.firstName} ${snapshot.lastName}.`,
       metadata: snapshot,
@@ -351,9 +317,6 @@ export const deletePatient = async (req, res) => {
   }
 };
 
-/**
- * Get patient audit logs
- */
 export const getPatientAudits = async (req, res) => {
   try {
     const { patientId } = req.params;
@@ -361,7 +324,6 @@ export const getPatientAudits = async (req, res) => {
     const limit = toLimit(req.query.limit, 25, 100);
     const offset = toOffset(page, limit);
 
-    // Verify patient exists
     const patient = await Patient.findByPk(patientId);
     if (!patient) {
       return res.status(404).json({
@@ -370,16 +332,27 @@ export const getPatientAudits = async (req, res) => {
       });
     }
 
-    const { count, rows } = await PatientAuditLog.findAndCountAll({
-      where: { patientId },
+    const { count, rows } = await AuditLog.findAndCountAll({
+      where: {
+        entityTable: "patient",
+        entityId: Number(patientId),
+      },
       limit,
       offset,
-      order: [["createdat", "DESC"]],
+      order: [["created_at", "DESC"]],
     });
 
     return res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map((row) => ({
+        id: row.id,
+        patientId: Number(patientId),
+        fieldName: "patient",
+        oldValue: row.changes?.before ? JSON.stringify(row.changes.before) : null,
+        newValue: row.changes?.after ? JSON.stringify(row.changes.after) : null,
+        changedByUserId: row.userId,
+        createdat: row.created_at,
+      })),
       pagination: {
         total: count,
         page: Number(page),
@@ -395,13 +368,9 @@ export const getPatientAudits = async (req, res) => {
   }
 };
 
-/**
- * List patient insurances
- */
 export const listPatientInsurances = async (req, res) => {
   try {
     const { id } = req.params;
-
     const patient = await Patient.findByPk(id);
 
     if (!patient) {
@@ -413,7 +382,7 @@ export const listPatientInsurances = async (req, res) => {
 
     const insurances = await PatientInsurance.findAll({
       where: { patient_id: id },
-      order: [["createdat", "DESC"]],
+      order: [["insurance_id", "DESC"]],
     });
 
     return res.status(200).json({
@@ -428,16 +397,12 @@ export const listPatientInsurances = async (req, res) => {
   }
 };
 
-/**
- * Add patient insurance
- */
 export const addPatientInsurance = async (req, res) => {
   try {
     const { id } = req.params;
-    const { provider_name, member_id, bin_number, pcn_number } = req.body;
+    const { provider_name, member_id, bin_number, pcn_number } = req.body || {};
 
     const patient = await Patient.findByPk(id);
-
     if (!patient) {
       return res.status(404).json({
         success: false,
@@ -445,30 +410,27 @@ export const addPatientInsurance = async (req, res) => {
       });
     }
 
-    if (!provider_name || !member_id) {
+    if (!provider_name || !member_id || !bin_number) {
       return res.status(400).json({
         success: false,
-        message: "provider_name and member_id are required.",
+        message: "provider_name, member_id, and bin_number are required.",
       });
     }
 
     const insurance = await PatientInsurance.create({
-      patient_id: id,
-      provider_name,
-      member_id,
-      bin_number: bin_number || null,
-      pcn_number: pcn_number || null,
+      patient_id: Number(id),
+      provider_name: String(provider_name).trim(),
+      member_id: String(member_id).trim(),
+      bin_number: String(bin_number).trim(),
+      pcn_number: pcn_number ? String(pcn_number).trim() : null,
     });
 
     await writeAuditLog({
-      entityType: "patient_insurance",
+      entityType: "insurance",
       entityId: insurance.insurance_id,
       action: "created",
-      summary: `Added insurance ${insurance.provider_name} for patient ${patient.patientNumber}.`,
-      metadata: {
-        patientId: id,
-        insurance: insurance.toJSON(),
-      },
+      summary: `Added insurance ${insurance.provider_name} for patient ${patient.id}.`,
+      metadata: insurance.toJSON(),
       ...buildActorContext(req),
     });
 
@@ -485,14 +447,9 @@ export const addPatientInsurance = async (req, res) => {
   }
 };
 
-/**
- * Update patient insurance
- */
 export const updatePatientInsurance = async (req, res) => {
   try {
     const { id, insuranceId } = req.params;
-    const { provider_name, member_id, bin_number, pcn_number } = req.body;
-
     const patient = await Patient.findByPk(id);
 
     if (!patient) {
@@ -504,8 +461,8 @@ export const updatePatientInsurance = async (req, res) => {
 
     const insurance = await PatientInsurance.findOne({
       where: {
-        insurance_id: insuranceId,
-        patient_id: id,
+        insurance_id: Number(insuranceId),
+        patient_id: Number(id),
       },
     });
 
@@ -517,27 +474,29 @@ export const updatePatientInsurance = async (req, res) => {
     }
 
     const updates = {};
-
-    if (provider_name !== undefined) {
-      updates.provider_name = provider_name;
+    if (req.body.provider_name !== undefined) {
+      updates.provider_name = String(req.body.provider_name).trim();
+    }
+    if (req.body.member_id !== undefined) {
+      updates.member_id = String(req.body.member_id).trim();
+    }
+    if (req.body.bin_number !== undefined) {
+      updates.bin_number = String(req.body.bin_number).trim();
+    }
+    if (req.body.pcn_number !== undefined) {
+      updates.pcn_number = req.body.pcn_number
+        ? String(req.body.pcn_number).trim()
+        : null;
     }
 
-    if (member_id !== undefined) {
-      updates.member_id = member_id;
-    }
+    const nextProvider = updates.provider_name ?? insurance.provider_name;
+    const nextMember = updates.member_id ?? insurance.member_id;
+    const nextBin = updates.bin_number ?? insurance.bin_number;
 
-    if (bin_number !== undefined) {
-      updates.bin_number = bin_number || null;
-    }
-
-    if (pcn_number !== undefined) {
-      updates.pcn_number = pcn_number || null;
-    }
-
-    if (!updates.provider_name || !updates.member_id) {
+    if (!nextProvider || !nextMember || !nextBin) {
       return res.status(400).json({
         success: false,
-        message: "provider_name and member_id are required.",
+        message: "provider_name, member_id, and bin_number are required.",
       });
     }
 
@@ -545,15 +504,11 @@ export const updatePatientInsurance = async (req, res) => {
     await insurance.update(updates);
 
     await writeAuditLog({
-      entityType: "patient_insurance",
+      entityType: "insurance",
       entityId: insurance.insurance_id,
       action: "updated",
-      summary: `Updated insurance ${insurance.provider_name} for patient ${patient.patientNumber}.`,
-      metadata: {
-        patientId: id,
-        before,
-        after: insurance.toJSON(),
-      },
+      summary: `Updated insurance ${insurance.provider_name} for patient ${patient.id}.`,
+      metadata: { before, after: insurance.toJSON() },
       ...buildActorContext(req),
     });
 
@@ -570,13 +525,9 @@ export const updatePatientInsurance = async (req, res) => {
   }
 };
 
-/**
- * Delete patient insurance
- */
 export const deletePatientInsurance = async (req, res) => {
   try {
     const { id, insuranceId } = req.params;
-
     const patient = await Patient.findByPk(id);
 
     if (!patient) {
@@ -588,8 +539,8 @@ export const deletePatientInsurance = async (req, res) => {
 
     const insurance = await PatientInsurance.findOne({
       where: {
-        insurance_id: insuranceId,
-        patient_id: id,
+        insurance_id: Number(insuranceId),
+        patient_id: Number(id),
       },
     });
 
@@ -604,14 +555,11 @@ export const deletePatientInsurance = async (req, res) => {
     await insurance.destroy();
 
     await writeAuditLog({
-      entityType: "patient_insurance",
-      entityId: insuranceId,
+      entityType: "insurance",
+      entityId: Number(insuranceId),
       action: "deleted",
-      summary: `Deleted insurance ${snapshot.provider_name} for patient ${patient.patientNumber}.`,
-      metadata: {
-        patientId: id,
-        insurance: snapshot,
-      },
+      summary: `Deleted insurance ${snapshot.provider_name} for patient ${patient.id}.`,
+      metadata: snapshot,
       ...buildActorContext(req),
     });
 

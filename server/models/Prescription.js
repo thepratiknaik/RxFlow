@@ -1,151 +1,123 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 import Patient from "./Patient.js";
+import {
+  getDefaultPharmacyId,
+  getPrescriptionStatusId,
+  getPrescriptionStatusNameById,
+  normalizePrescriptionStatus,
+} from "../services/schemaCompatService.js";
 
 const Prescription = sequelize.define(
   "Prescription",
   {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
+      field: "prescription_id",
     },
-    prescriptionNumber: {
-      type: DataTypes.STRING,
+    pharmacyId: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      unique: true,
-    },
-    status: {
-      type: DataTypes.ENUM(
-        "new",
-        "in_process",
-        "ready",
-        "picked_up",
-        "cancelled",
-      ),
-      allowNull: false,
-      defaultValue: "new",
-    },
-    source: {
-      type: DataTypes.ENUM("fhir", "manual"),
-      allowNull: false,
-    },
-    fhirServerBaseUrl: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    fhirResourceId: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    fhirClinicalStatus: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    fhirLastUpdated: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    fhirRaw: {
-      type: DataTypes.JSONB,
-      allowNull: true,
+      field: "pharmacy_id",
     },
     patientId: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: Patient,
-        key: "id",
-      },
-    },
-    externalSubjectRef: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    medicationDisplay: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
       allowNull: false,
+      field: "patient_id",
     },
-    medicationCode: {
-      type: DataTypes.STRING,
-      allowNull: true,
+    prescriberId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "prescriber_id",
     },
-    sig: {
-      type: DataTypes.TEXT,
-      allowNull: true,
+    drugId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "drug_id",
     },
-    quantityValue: {
-      type: DataTypes.DECIMAL(12, 4),
-      allowNull: true,
-    },
-    quantityUnit: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    refillsAllowed: {
+    insuranceId: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      field: "insurance_id",
     },
-    authoredOn: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-    },
-    prescriberDisplay: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    notes: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    insuranceProviderName: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    insurancePolicyNumber: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    insuranceGroupId: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    etInApproved: {
-      type: DataTypes.BOOLEAN,
+    statusId: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: false,
+      field: "status_id",
     },
-    etInApprovedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
+    quantity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
-    etInApprovedByUserId: {
-      type: DataTypes.UUID,
+    enteredById: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "entered_by",
+    },
+    verifiedById: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      references: {
-        model: "users",
-        key: "id",
+      field: "verified_by",
+    },
+    status: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return this.getDataValue("statusName") || "new";
+      },
+      set(value) {
+        this.setDataValue("statusName", normalizePrescriptionStatus(value));
+      },
+    },
+    prescriptionNumber: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return String(this.id || "");
+      },
+    },
+    quantityValue: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return this.quantity ?? null;
       },
     },
   },
   {
-    tableName: "prescriptions",
+    tableName: "prescription",
     timestamps: true,
-    createdAt: "createdat",
-    updatedAt: "updatedat",
-    indexes: [
-      {
-        unique: true,
-        fields: ["fhirServerBaseUrl", "fhirResourceId"],
-        name: "prescriptions_fhir_server_resource_unique",
-      },
-      {
-        fields: ["status", "createdat"],
-        name: "prescriptions_status_created_idx",
-      },
-    ],
+    createdAt: "created_at",
+    updatedAt: false,
   },
 );
+
+Prescription.beforeValidate(async (prescription) => {
+  if (!prescription.pharmacyId) {
+    const pharmacyId = await getDefaultPharmacyId();
+    if (!pharmacyId) {
+      throw new Error("At least one pharmacy row must exist before creating prescriptions.");
+    }
+    prescription.pharmacyId = pharmacyId;
+  }
+
+  if (!prescription.statusId) {
+    prescription.statusId = await getPrescriptionStatusId(
+      prescription.getDataValue("statusName") || prescription.status || "new",
+    );
+  }
+});
+
+Prescription.afterFind(async (result) => {
+  const records = Array.isArray(result) ? result : result ? [result] : [];
+  await Promise.all(
+    records.map(async (prescription) => {
+      prescription.setDataValue(
+        "statusName",
+        await getPrescriptionStatusNameById(prescription.statusId),
+      );
+    }),
+  );
+});
 
 Prescription.belongsTo(Patient, { foreignKey: "patientId", as: "patient" });
 

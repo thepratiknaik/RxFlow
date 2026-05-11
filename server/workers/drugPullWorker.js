@@ -1,5 +1,4 @@
 import { Worker } from "bullmq";
-import DrugPullAudit from "../models/DrugPullAudit.js";
 import {
   DRUG_PULL_QUEUE_NAME,
   redisConnection,
@@ -9,44 +8,8 @@ import { pullAndUpsertDrugs } from "../services/drugPullService.js";
 let workerInstance = null;
 
 const processDrugPullJob = async (job) => {
-  const { auditId, searchTerm = "", limit = 25 } = job.data || {};
-
-  const audit = await DrugPullAudit.findByPk(auditId);
-  if (!audit) {
-    throw new Error("Audit row not found for queued job.");
-  }
-
-  await audit.update({
-    status: "processing",
-    startedat: new Date(),
-    errormessage: null,
-  });
-
-  try {
-    const summary = await pullAndUpsertDrugs({ searchTerm, limit });
-
-    await audit.update({
-      status: "completed",
-      sourcetotalmatches: summary.sourceTotalMatches,
-      pulled: summary.pulled,
-      inserted: summary.inserted,
-      updated: summary.updated,
-      completedat: new Date(),
-    });
-
-    return {
-      auditId,
-      ...summary,
-    };
-  } catch (error) {
-    await audit.update({
-      status: "failed",
-      errormessage: error.message || "Drug pull failed.",
-      completedat: new Date(),
-    });
-
-    throw error;
-  }
+  const { searchTerm = "", limit = 25 } = job.data || {};
+  return await pullAndUpsertDrugs({ searchTerm, limit });
 };
 
 export const startDrugPullWorker = () => {

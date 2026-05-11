@@ -15,18 +15,17 @@ export const listAuditLogs = async (req, res) => {
     const where = {};
 
     if (entityType) {
-      where.entityType = entityType;
+      where.entityTable = entityType;
     }
 
     if (action) {
-      where.action = action;
+      where.actionType = action.toUpperCase();
     }
 
     if (q) {
       where[Op.or] = [
-        { summary: { [Op.iLike]: `%${q}%` } },
-        { entityType: { [Op.iLike]: `%${q}%` } },
-        { action: { [Op.iLike]: `%${q}%` } },
+        { entityTable: { [Op.iLike]: `%${q}%` } },
+        { actionType: { [Op.iLike]: `%${q.toUpperCase()}%` } },
       ];
     }
 
@@ -34,12 +33,27 @@ export const listAuditLogs = async (req, res) => {
       where,
       limit,
       offset: (page - 1) * limit,
-      order: [["createdat", "DESC"]],
+      order: [["created_at", "DESC"]],
+    });
+
+    const data = rows.map((row) => {
+      const changes = row.changes || {};
+      return {
+        id: row.id,
+        entityType: row.entityTable,
+        entityId: row.entityId,
+        action: changes.action || row.actionType.toLowerCase(),
+        actorUserId: row.userId,
+        actorRole: changes.actorRole || null,
+        summary: changes.summary || `${row.entityTable} ${row.actionType}`,
+        metadata: changes.metadata || null,
+        createdat: row.created_at,
+      };
     });
 
     return res.status(200).json({
       success: true,
-      data: rows,
+      data,
       pagination: {
         page,
         limit,

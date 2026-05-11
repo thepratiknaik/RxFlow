@@ -5,6 +5,7 @@ services:
     command: npm start
     environment:
       NODE_ENV: development
+      REACT_APP_API_BASE_URL: http://localhost:5000/api
       HOST: 0.0.0.0
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"

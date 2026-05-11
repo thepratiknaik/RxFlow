@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import PrescriptionReviewToken from "../models/PrescriptionReviewToken.js";
 
@@ -29,13 +30,11 @@ const resolveRecipientEmail = (prescriberEmail) => {
     return normalizedPrescriberEmail;
   }
 
-  const fallbackEmail = String(
+  return String(
     process.env.PRESCRIPTION_REVIEW_FALLBACK_EMAIL || DEFAULT_PRESCRIBER_EMAIL,
   )
     .trim()
     .toLowerCase();
-
-  return fallbackEmail;
 };
 
 const createTransporter = () => {
@@ -56,14 +55,121 @@ const createTransporter = () => {
   });
 };
 
-export const generateReviewToken = () => crypto.randomBytes(32).toString("hex");
+const hashReviewToken = (token) =>
+  crypto.createHash("sha256").update(String(token || "")).digest("hex");
 
-export const hashReviewToken = (token) =>
-  crypto.createHash("sha256").update(String(token)).digest("hex");
+const mapReviewRecord = (record) => {
+  if (!record) {
+    return null;
+  }
+
+  return {
+    id: record.id,
+    prescriptionId: record.prescriptionId,
+    recipientEmail: record.recipientEmail || null,
+    recipientName: record.recipientName || null,
+    reviewUrl: record.reviewUrl || null,
+    sentAt: record.sentAt || null,
+    expiresAt: record.expiresAt || null,
+    usedAt: record.usedAt || null,
+    decision: record.decision || null,
+  };
+};
+
+export const getReviewStatus = (record, now = new Date()) => {
+  if (!record) {
+    return "not_sent";
+  }
+
+  if (record.decision === "approved") {
+    return "approved";
+  }
+
+  if (record.decision === "rejected") {
+    return "rejected";
+  }
+
+  if (record.usedAt) {
+    return "completed";
+  }
+
+  if (record.expiresAt && new Date(record.expiresAt).getTime() < now.getTime()) {
+    return "expired";
+  }
+
+  return "pending";
+};
+
+export const generateReviewToken = (payload) =>
+  jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: `${getTokenTtlHours()}h`,
+  });
 
 export const buildReviewUrl = (token) => {
   const baseUrl = getFrontendBaseUrl();
   return `${baseUrl}/prescription-review?token=${encodeURIComponent(token)}`;
+};
+
+export const listPrescriptionReviewRecords = async (prescriptionId) => {
+  const rows = await PrescriptionReviewToken.findAll({
+    where: { prescriptionId: Number(prescriptionId) },
+    order: [["createdat", "DESC"]],
+  });
+
+  return rows.map(mapReviewRecord);
+};
+
+export const buildPrescriptionReviewSummary = (records) => {
+  if (!records.length) {
+    return {
+      hasBeenSent: false,
+      totalSent: 0,
+      latestStatus: "not_sent",
+      latestDecision: null,
+      latestSentAt: null,
+      latestReviewedAt: null,
+    };
+  }
+
+  const latest = records[0];
+  return {
+    hasBeenSent: true,
+    totalSent: records.length,
+    latestStatus: getReviewStatus(latest),
+    latestDecision: latest.decision || null,
+    latestSentAt: latest.sentAt || null,
+    latestReviewedAt: latest.usedAt || null,
+  };
+};
+
+export const resolveReviewTokenRecord = async (token) => {
+  const decoded = jwt.verify(String(token || ""), process.env.JWT_SECRET);
+  const tokenHash = hashReviewToken(token);
+  const record = await PrescriptionReviewToken.findOne({
+    where: {
+      prescriptionId: Number(decoded.prescriptionId),
+      tokenHash,
+    },
+  });
+
+  if (!record) {
+    throw new Error("Review link not found.");
+  }
+
+  return mapReviewRecord(record);
+};
+
+export const markReviewTokenUsed = async ({ tokenRecordId, decision }) => {
+  const record = await PrescriptionReviewToken.findByPk(tokenRecordId);
+  if (!record) {
+    throw new Error("Review link not found.");
+  }
+
+  record.usedAt = new Date();
+  record.decision = decision;
+  await record.save();
+
+  return mapReviewRecord(record);
 };
 
 export const createPrescriptionReviewInvite = async ({
@@ -72,19 +178,25 @@ export const createPrescriptionReviewInvite = async ({
   prescriberEmail,
   prescriptionSummary,
 }) => {
-  const token = generateReviewToken();
-  const tokenHash = hashReviewToken(token);
-  const expiresAt = new Date(Date.now() + getTokenTtlHours() * 60 * 60 * 1000);
-  const reviewUrl = buildReviewUrl(token);
   const recipientEmail = resolveRecipientEmail(prescriberEmail);
+  const expiresAt = new Date(Date.now() + getTokenTtlHours() * 60 * 60 * 1000);
+  const sentAt = new Date();
 
-  const reviewToken = await PrescriptionReviewToken.create({
+  const token = generateReviewToken({
     prescriptionId,
-    tokenHash,
+    recipientEmail,
+    recipientName: prescriberName || "Prescriber",
+    sentAt: sentAt.toISOString(),
+  });
+  const reviewUrl = buildReviewUrl(token);
+
+  const reviewRecord = await PrescriptionReviewToken.create({
+    prescriptionId: Number(prescriptionId),
+    tokenHash: hashReviewToken(token),
     recipientEmail,
     recipientName: prescriberName || "Prescriber",
     reviewUrl,
-    sentAt: new Date(),
+    sentAt,
     expiresAt,
     usedAt: null,
     decision: null,
@@ -92,7 +204,7 @@ export const createPrescriptionReviewInvite = async ({
 
   const subject = `Prescription review request for ${prescriberName || "Prescriber"}`;
   const text = [
-    `A new prescription is ready for your review.`,
+    "A new prescription is ready for your review.",
     "",
     `Prescriber: ${prescriberName || "Prescriber"}`,
     `Medication: ${prescriptionSummary?.medicationDisplay || "N/A"}`,
@@ -101,41 +213,48 @@ export const createPrescriptionReviewInvite = async ({
     "",
     "Review link:",
     reviewUrl,
-    "",
-    "This link can be used once to approve or reject the prescription.",
   ].join("\n");
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #102a43;">
-      <h2 style="margin: 0 0 12px;">Prescription review request</h2>
-      <p>A new prescription is ready for your review.</p>
-      <ul>
-        <li><strong>Prescriber:</strong> ${prescriberName || "Prescriber"}</li>
-        <li><strong>Medication:</strong> ${prescriptionSummary?.medicationDisplay || "N/A"}</li>
-        <li><strong>Quantity:</strong> ${prescriptionSummary?.quantityValue ?? "N/A"}</li>
-        <li><strong>Patient:</strong> ${prescriptionSummary?.patientName || "N/A"}</li>
-      </ul>
-      <p>
-        <a href="${reviewUrl}" style="display:inline-block;background:#1f9e89;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;">
-          Open Review Page
-        </a>
-      </p>
-      <p style="color:#52606d;font-size:12px;">This link can be used once to approve or reject the prescription.</p>
-    </div>
-  `;
-
   const transporter = createTransporter();
-
   if (transporter) {
-    await transporter.sendMail({
+    console.log("[Email] Attempting SMTP send", {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE,
+      user: process.env.SMTP_USER,
       from: process.env.SMTP_FROM || DEFAULT_SMTP_FROM,
       to: recipientEmail,
       subject,
-      text,
-      html,
+      prescriptionId,
     });
+    try {
+      const info = await transporter.sendMail({
+        from: process.env.SMTP_FROM || DEFAULT_SMTP_FROM,
+        to: recipientEmail,
+        subject,
+        text,
+        html: `<p>${text.replace(/\n/g, "<br/>")}</p>`,
+      });
+      console.log("[Email] SMTP send succeeded", {
+        messageId: info.messageId,
+        response: info.response,
+        accepted: info.accepted,
+        rejected: info.rejected,
+        to: recipientEmail,
+        prescriptionId,
+      });
+    } catch (smtpError) {
+      console.error("[Email] SMTP send FAILED", {
+        error: smtpError.message,
+        code: smtpError.code,
+        command: smtpError.command,
+        to: recipientEmail,
+        prescriptionId,
+      });
+      throw smtpError;
+    }
   } else {
-    console.log("[Prescription email stub]", {
+    console.log("[Email] SMTP not configured — stub mode", {
       to: recipientEmail,
       subject,
       reviewUrl,
@@ -144,21 +263,14 @@ export const createPrescriptionReviewInvite = async ({
   }
 
   return {
-    reviewToken,
+    reviewToken: {
+      id: reviewRecord.id,
+      recipientEmail,
+      recipientName: prescriberName || "Prescriber",
+      expiresAt,
+    },
     reviewUrl,
     deliveryMode: transporter ? "smtp" : "stub",
-    reviewRecord: {
-      id: reviewToken.id,
-      recipientEmail: reviewToken.recipientEmail,
-      recipientName: reviewToken.recipientName,
-      expiresAt: reviewToken.expiresAt,
-    },
+    reviewRecord: mapReviewRecord(reviewRecord),
   };
-};
-
-export const resolveReviewTokenRecord = async (token) => {
-  const tokenHash = hashReviewToken(token);
-  return await PrescriptionReviewToken.findOne({
-    where: { tokenHash },
-  });
 };

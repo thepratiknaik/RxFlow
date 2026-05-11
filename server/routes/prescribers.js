@@ -31,6 +31,12 @@ router.patch(
   authorize(["pharmacist", "admin"]),
   updatePrescriber,
 );
+router.put(
+  "/:id",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  updatePrescriber,
+);
 
 router.delete(
   "/:id",

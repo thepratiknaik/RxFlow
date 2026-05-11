@@ -1,7 +1,10 @@
-import { Op } from "sequelize";
 import Prescription from "../models/Prescription.js";
-
-const RX_PREFIX = "RX";
+import {
+  ensureDrugByDescriptor,
+  ensurePatientByDescriptor,
+  ensurePrescriberByDescriptor,
+  getPrescriptionStatusId,
+} from "./schemaCompatService.js";
 
 export const normalizeFhirBaseUrl = (baseUrl) =>
   String(baseUrl || "")
@@ -9,201 +12,29 @@ export const normalizeFhirBaseUrl = (baseUrl) =>
     .replace(/\/+$/, "");
 
 const extractMedicationDisplay = (resource) => {
-  const mc = resource.medicationCodeableConcept;
-  if (mc?.text) {
-    return mc.text;
+  const medication = resource.medicationCodeableConcept;
+  if (medication?.text) {
+    return medication.text;
   }
 
-  if (mc?.coding?.length) {
-    const withDisplay = mc.coding.find((c) => c.display);
-    return withDisplay?.display || mc.coding[0]?.code || null;
-  }
-
-  if (resource.medicationReference?.reference) {
-    return resource.medicationReference.reference;
-  }
-
-  return null;
-};
-
-const extractMedicationCode = (resource) => {
-  const mc = resource.medicationCodeableConcept;
-  const code = mc?.coding?.[0];
-  if (!code?.code) {
-    return null;
-  }
-
-  const system = code.system ? `${code.system}|` : "";
-  return `${system}${code.code}`;
-};
-
-const mapFhirClinicalStatusToWorkflow = (fhirStatus) => {
-  const v = String(fhirStatus || "").toLowerCase();
-
-  if (v === "cancelled" || v === "entered-in-error" || v === "stopped") {
-    return "cancelled";
-  }
-
-  if (v === "completed") {
-    return "ready";
-  }
-
-  return "new";
-};
-
-const buildSig = (resource) => {
-  if (!Array.isArray(resource.dosageInstruction)) {
-    return null;
-  }
-
-  const parts = resource.dosageInstruction
-    .map((d) => d?.text)
-    .filter(Boolean);
-
-  return parts.length ? parts.join("; ") : null;
-};
-
-const extractInsuranceFromMedicationRequest = (resource) => {
-  let insuranceProviderName = null;
-  let insurancePolicyNumber = null;
-  let insuranceGroupId = null;
-
-  const contained = resource.contained || [];
-  for (const c of contained) {
-    if (c.resourceType !== "Coverage") {
-      continue;
-    }
-
-    const payor = c.payor?.[0];
-    insuranceProviderName =
-      payor?.display ||
-      payor?.reference ||
-      c.payor?.[0]?.identifier?.value ||
-      insuranceProviderName;
-
-    const subscriberId = c.subscriberId;
-    const idValue = c.identifier?.find((i) => i.value)?.value;
-    insurancePolicyNumber = subscriberId || idValue || insurancePolicyNumber;
-
-    const groupClass = (c.class || []).find((cl) =>
-      cl.type?.coding?.some((co) => co.code === "group"),
-    );
-    if (groupClass) {
-      insuranceGroupId = groupClass.value || groupClass.name || insuranceGroupId;
-    }
-  }
-
-  for (const ext of resource.extension || []) {
-    const url = String(ext.url || "").toLowerCase();
-    const str = ext.valueString || ext.valueUri;
-    if (!str) {
-      continue;
-    }
-
-    if (url.includes("insurance") && url.includes("provider")) {
-      insuranceProviderName = str;
-    } else if (url.includes("policy") || url.includes("member")) {
-      insurancePolicyNumber = str;
-    } else if (url.includes("group")) {
-      insuranceGroupId = str;
-    }
-  }
-
-  return {
-    insuranceProviderName,
-    insurancePolicyNumber,
-    insuranceGroupId,
-  };
+  const coding = medication?.coding?.[0];
+  return coding?.display || coding?.code || resource.medicationReference?.reference || "Medication";
 };
 
 const extractQuantity = (resource) => {
-  const dq = resource.dispenseRequest;
-  const q = dq?.quantity;
-  if (!q || q.value == null) {
-    return { quantityValue: null, quantityUnit: null };
-  }
-
-  const value = Number(q.value);
-  const unit = q.unit || q.code || null;
-
-  return {
-    quantityValue: Number.isFinite(value) ? value : null,
-    quantityUnit: unit,
-  };
+  const value = Number(resource?.dispenseRequest?.quantity?.value);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : 1;
 };
 
-export const mapMedicationRequestToPayload = (resource, fhirServerBaseUrl) => {
-  if (!resource?.id || resource.resourceType !== "MedicationRequest") {
-    return null;
+const mapFhirStatus = (value) => {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "completed") {
+    return "ready";
   }
-
-  const fhirStatus = resource.status || "unknown";
-  const workflowStatus = mapFhirClinicalStatusToWorkflow(fhirStatus);
-  const medicationDisplay =
-    extractMedicationDisplay(resource) || "Medication (unspecified)";
-  const { quantityValue, quantityUnit } = extractQuantity(resource);
-
-  let prescriberDisplay = null;
-  if (resource.requester?.display) {
-    prescriberDisplay = resource.requester.display;
-  } else if (resource.requester?.reference) {
-    prescriberDisplay = resource.requester.reference;
+  if (normalized === "cancelled" || normalized === "entered-in-error" || normalized === "stopped") {
+    return "cancelled";
   }
-
-  const authoredOn = resource.authoredOn
-    ? String(resource.authoredOn).slice(0, 10)
-    : null;
-
-  const fhirLastUpdated = resource.meta?.lastUpdated
-    ? new Date(resource.meta.lastUpdated)
-    : null;
-
-  const insurance = extractInsuranceFromMedicationRequest(resource);
-
-  return {
-    source: "fhir",
-    fhirServerBaseUrl,
-    fhirResourceId: resource.id,
-    fhirClinicalStatus: fhirStatus,
-    fhirLastUpdated,
-    fhirRaw: resource,
-    externalSubjectRef: resource.subject?.reference || null,
-    medicationDisplay,
-    medicationCode: extractMedicationCode(resource),
-    sig: buildSig(resource),
-    quantityValue,
-    quantityUnit,
-    refillsAllowed:
-      resource.dispenseRequest?.numberOfRepeatsAllowed != null
-        ? Number(resource.dispenseRequest.numberOfRepeatsAllowed)
-        : null,
-    authoredOn,
-    prescriberDisplay,
-    status: workflowStatus,
-    insuranceProviderName: insurance.insuranceProviderName,
-    insurancePolicyNumber: insurance.insurancePolicyNumber,
-    insuranceGroupId: insurance.insuranceGroupId,
-    etInApproved: false,
-  };
-};
-
-export const generatePrescriptionNumber = async () => {
-  const latest = await Prescription.findOne({
-    where: {
-      prescriptionNumber: {
-        [Op.iLike]: `${RX_PREFIX}%`,
-      },
-    },
-    order: [["createdat", "DESC"]],
-  });
-
-  const latestNumber = latest?.prescriptionNumber || "";
-  const numericPortion = Number(
-    String(latestNumber).replace(new RegExp(`^${RX_PREFIX}`, "i"), ""),
-  );
-  const next = Number.isFinite(numericPortion) ? numericPortion + 1 : 1;
-
-  return `${RX_PREFIX}${String(next).padStart(8, "0")}`;
+  return "new";
 };
 
 export const syncMedicationRequestsFromFhir = async ({
@@ -224,9 +55,7 @@ export const syncMedicationRequestsFromFhir = async ({
   url.searchParams.set("_sort", "-_lastUpdated");
 
   const response = await fetch(url.toString(), {
-    headers: {
-      Accept: "application/fhir+json, application/json",
-    },
+    headers: { Accept: "application/fhir+json, application/json" },
   });
 
   const rawText = await response.text();
@@ -239,69 +68,77 @@ export const syncMedicationRequestsFromFhir = async ({
   }
 
   if (!response.ok) {
-    const msg =
+    const message =
       payload?.issue?.[0]?.diagnostics ||
       payload?.message ||
       `FHIR request failed with status ${response.status}.`;
-    const err = new Error(msg);
-    err.status = response.status >= 400 && response.status < 600 ? response.status : 502;
-    throw err;
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   if (payload?.resourceType !== "Bundle") {
     throw new Error("Unexpected FHIR response: expected a Bundle.");
   }
 
-  const entries = payload.entry || [];
   let created = 0;
   let updated = 0;
   let skipped = 0;
 
-  for (const entry of entries) {
+  for (const entry of payload.entry || []) {
     const resource = entry?.resource;
-    const mapped = mapMedicationRequestToPayload(resource, normalizedBase);
-
-    if (!mapped) {
+    if (!resource?.id || resource.resourceType !== "MedicationRequest") {
       skipped += 1;
       continue;
     }
 
-    const existing = await Prescription.findOne({
-      where: {
-        fhirServerBaseUrl: normalizedBase,
-        fhirResourceId: mapped.fhirResourceId,
-      },
+    const medicationDisplay = extractMedicationDisplay(resource);
+    const prescriptionStatus = mapFhirStatus(resource.status);
+    const statusId = await getPrescriptionStatusId(prescriptionStatus);
+    const drugId = await ensureDrugByDescriptor({
+      ndcCode: resource.medicationCodeableConcept?.coding?.[0]?.code || null,
+      brandName: medicationDisplay,
+      genericName: medicationDisplay,
+      dosageForm: resource.medicationCodeableConcept?.coding?.[0]?.display || null,
+      route: resource?.dosageInstruction?.[0]?.route?.text || null,
+    });
+    const prescriberId = await ensurePrescriberByDescriptor({
+      npi: resource.requester?.identifier?.value || null,
+      name: resource.requester?.display || resource.requester?.reference || "FHIR Prescriber",
+      email: null,
+    });
+    const patientId = await ensurePatientByDescriptor({
+      firstName: "FHIR",
+      lastName: "Patient",
+      dob: "1970-01-01",
     });
 
+    const existing = await Prescription.findOne({
+      where: {
+        patientId,
+        prescriberId,
+        drugId,
+      },
+      order: [["created_at", "DESC"]],
+    });
+
+    const payloadToSave = {
+      patientId,
+      prescriberId,
+      drugId,
+      status: prescriptionStatus,
+      statusId,
+      quantity: extractQuantity(resource),
+      enteredById: 1,
+      verifiedById: null,
+      insuranceId: null,
+    };
+
     if (existing) {
-      if (existing.status !== "new") {
-        await existing.update({
-          fhirLastUpdated: mapped.fhirLastUpdated,
-          fhirRaw: mapped.fhirRaw,
-          fhirClinicalStatus: mapped.fhirClinicalStatus,
-        });
-      } else {
-        const patch = {
-          ...mapped,
-          prescriptionNumber: existing.prescriptionNumber,
-        };
-
-        if (existing.etInApproved) {
-          patch.etInApproved = existing.etInApproved;
-          patch.etInApprovedAt = existing.etInApprovedAt;
-          patch.etInApprovedByUserId = existing.etInApprovedByUserId;
-        }
-
-        await existing.update(patch);
-      }
+      await existing.update(payloadToSave);
       updated += 1;
     } else {
-      const prescriptionNumber = await generatePrescriptionNumber();
-      await Prescription.create({
-        ...mapped,
-        prescriptionNumber,
-        patientId: null,
-      });
+      await Prescription.create(payloadToSave);
       created += 1;
     }
   }
@@ -310,7 +147,7 @@ export const syncMedicationRequestsFromFhir = async ({
     created,
     updated,
     skipped,
-    fetched: entries.length,
+    fetched: (payload.entry || []).length,
     fhirRequestUrl: url.toString(),
   };
 };

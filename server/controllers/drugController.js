@@ -1,6 +1,6 @@
 import { Op } from "sequelize";
 import Drug from "../models/Drug.js";
-import DrugPullAudit from "../models/DrugPullAudit.js";
+import AuditLog from "../models/AuditLog.js";
 import {
   addDrugPullJob,
   checkRedisHealth,
@@ -29,31 +29,17 @@ export const pullDrugs = async (req, res) => {
 
     const searchTerm = req.body?.searchTerm || req.query?.searchTerm || "";
     const limit = toLimit(req.body?.limit || req.query?.limit, 25, 100);
-
-    const audit = await DrugPullAudit.create({
-      status: "queued",
-      searchterm: searchTerm,
-      requestedlimit: limit,
-      requestedbyuserid: req.user?.id || null,
-    });
-
     const job = await addDrugPullJob({
-      auditId: audit.id,
       searchTerm,
       limit,
     });
 
-    await audit.update({ jobid: String(job.id) });
-
-    const statusEndpoint = `/api/drugs/pull-jobs/${String(job.id)}`;
-
     await writeAuditLog({
-      entityType: "drug_pull_job",
-      entityId: audit.id,
-      action: "queued",
+      entityType: "drug",
+      entityId: 0,
+      action: "queued_pull",
       summary: `Queued drug pull job ${String(job.id)}.`,
       metadata: {
-        auditId: audit.id,
         jobId: String(job.id),
         searchTerm,
         requestedLimit: limit,
@@ -65,9 +51,8 @@ export const pullDrugs = async (req, res) => {
       success: true,
       message: "Drug pull job queued successfully.",
       data: {
-        auditId: audit.id,
         jobId: String(job.id),
-        statusEndpoint,
+        statusEndpoint: `/api/drugs/pull-jobs/${String(job.id)}`,
         searchTerm,
         requestedLimit: limit,
         status: "queued",
@@ -94,9 +79,6 @@ export const getDrugPullStatus = async (req, res) => {
     }
 
     const state = await job.getState();
-    const audit = await DrugPullAudit.findOne({
-      where: { jobid: String(job.id) },
-    });
 
     return res.status(200).json({
       success: true,
@@ -107,7 +89,6 @@ export const getDrugPullStatus = async (req, res) => {
         attemptsMade: job.attemptsMade,
         failedReason: job.failedReason || null,
         result: job.returnvalue || null,
-        audit,
       },
     });
   } catch (error) {
@@ -127,33 +108,19 @@ export const listDrugPullJobsStatus = async (req, res) => {
     });
 
     const jobsWithState = await Promise.all(
-      jobs.map(async (job) => {
-        const state = await job.getState();
-        const audit = await DrugPullAudit.findOne({
-          where: { jobid: String(job.id) },
-        });
-
-        return {
-          jobId: String(job.id),
-          name: job.name,
-          state,
-          progress: job.progress || 0,
-          attemptsMade: job.attemptsMade,
-          failedReason: job.failedReason || null,
-          createdAt: job.timestamp
-            ? new Date(job.timestamp).toISOString()
-            : null,
-          processedAt: job.processedOn
-            ? new Date(job.processedOn).toISOString()
-            : null,
-          finishedAt: job.finishedOn
-            ? new Date(job.finishedOn).toISOString()
-            : null,
-          data: job.data || null,
-          result: job.returnvalue || null,
-          audit,
-        };
-      }),
+      jobs.map(async (job) => ({
+        jobId: String(job.id),
+        name: job.name,
+        state: await job.getState(),
+        progress: job.progress || 0,
+        attemptsMade: job.attemptsMade,
+        failedReason: job.failedReason || null,
+        createdAt: job.timestamp ? new Date(job.timestamp).toISOString() : null,
+        processedAt: job.processedOn ? new Date(job.processedOn).toISOString() : null,
+        finishedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
+        data: job.data || null,
+        result: job.returnvalue || null,
+      })),
     );
 
     const summary = jobsWithState.reduce(
@@ -183,15 +150,22 @@ export const listDrugPullAudits = async (req, res) => {
     const limit = toLimit(req.query?.limit, 20, 100);
     const page = Math.max(Number(req.query?.page) || 1, 1);
 
-    const { rows, count } = await DrugPullAudit.findAndCountAll({
+    const { rows, count } = await AuditLog.findAndCountAll({
+      where: { entityTable: "drug" },
       limit,
       offset: (page - 1) * limit,
-      order: [["createdat", "DESC"]],
+      order: [["created_at", "DESC"]],
     });
 
     return res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map((row) => ({
+        id: row.id,
+        summary: row.changes?.summary || null,
+        action: row.changes?.action || row.actionType.toLowerCase(),
+        createdat: row.created_at,
+        metadata: row.changes?.metadata || null,
+      })),
       pagination: {
         page,
         limit,
@@ -227,7 +201,7 @@ export const listDrugs = async (req, res) => {
       where,
       limit,
       offset: (page - 1) * limit,
-      order: [["updatedat", "DESC"]],
+      order: [["created_at", "DESC"]],
     });
 
     return res.status(200).json({

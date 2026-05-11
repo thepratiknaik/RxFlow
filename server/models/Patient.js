@@ -1,29 +1,40 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
+import { getDefaultPharmacyId } from "../services/schemaCompatService.js";
 
 const Patient = sequelize.define(
   "Patient",
   {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
+      field: "patient_id",
+    },
+    pharmacyId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "pharmacy_id",
     },
     firstName: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: "first_name",
     },
     lastName: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: "last_name",
     },
     middleName: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: "middle_name",
     },
     dateOfBirth: {
       type: DataTypes.DATEONLY,
       allowNull: false,
+      field: "dob",
     },
     gender: {
       type: DataTypes.STRING,
@@ -35,36 +46,36 @@ const Patient = sequelize.define(
     },
     phonePrimary: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
+      field: "phone_primary",
     },
     phoneSecondary: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: "phone_secondary",
     },
     addressLine1: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
+      field: "address_line1",
     },
     addressLine2: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: "address_line2",
     },
     city: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     state: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     zipCode: {
       type: DataTypes.STRING,
-      allowNull: false,
-    },
-    patientNumber: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
+      allowNull: true,
+      field: "zip_code",
     },
     mrn: {
       type: DataTypes.STRING,
@@ -76,12 +87,21 @@ const Patient = sequelize.define(
     },
   },
   {
-    tableName: "patients",
+    tableName: "patient",
     timestamps: true,
-    createdAt: "createdat",
-    updatedAt: "updatedat",
-    underscored: false,
+    createdAt: "created_at",
+    updatedAt: "updated_at",
   },
 );
+
+Patient.beforeValidate(async (patient) => {
+  if (!patient.pharmacyId) {
+    const pharmacyId = await getDefaultPharmacyId();
+    if (!pharmacyId) {
+      throw new Error("At least one pharmacy row must exist before creating patients.");
+    }
+    patient.pharmacyId = pharmacyId;
+  }
+});
 
 export default Patient;

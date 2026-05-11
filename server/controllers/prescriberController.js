@@ -1,8 +1,11 @@
 import { Op } from "sequelize";
 import Prescriber from "../models/Prescriber.js";
-import Patient from "../models/Patient.js";
 import Prescription from "../models/Prescription.js";
-import PrescriptionReviewToken from "../models/PrescriptionReviewToken.js";
+import Patient from "../models/Patient.js";
+import {
+  getReviewStatus,
+  listPrescriptionReviewRecords,
+} from "../services/prescriptionNotificationService.js";
 import {
   buildActorContext,
   writeAuditLog,
@@ -11,91 +14,9 @@ import {
 const toLimit = (value, fallback = 25, max = 100) =>
   Math.min(Math.max(Number(value) || fallback, 1), max);
 
-const getReviewLifecycleStatus = (reviewToken) => {
-  if (!reviewToken) {
-    return "not_sent";
-  }
-
-  if (reviewToken.decision === "approved") {
-    return "approved";
-  }
-
-  if (reviewToken.decision === "rejected") {
-    return "rejected";
-  }
-
-  if (reviewToken.usedAt) {
-    return "completed";
-  }
-
-  if (
-    reviewToken.expiresAt &&
-    new Date(reviewToken.expiresAt).getTime() < Date.now()
-  ) {
-    return "expired";
-  }
-
-  return "pending";
-};
-
-const toReviewHistoryEntry = (reviewToken) => ({
-  id: reviewToken.id,
-  recipientEmail: reviewToken.recipientEmail,
-  recipientName: reviewToken.recipientName,
-  reviewUrl: reviewToken.reviewUrl,
-  sentAt: reviewToken.sentAt,
-  expiresAt: reviewToken.expiresAt,
-  usedAt: reviewToken.usedAt,
-  decision: reviewToken.decision,
-  status: getReviewLifecycleStatus(reviewToken),
-});
-
-const attachReviewHistory = async (prescriptions) => {
-  if (!Array.isArray(prescriptions) || !prescriptions.length) {
-    return [];
-  }
-
-  const prescriptionIds = prescriptions.map((item) => item.id).filter(Boolean);
-  const reviewTokens = await PrescriptionReviewToken.findAll({
-    where: {
-      prescriptionId: {
-        [Op.in]: prescriptionIds,
-      },
-    },
-    order: [
-      ["sentAt", "DESC"],
-      ["createdat", "DESC"],
-    ],
-  });
-
-  const reviewMap = new Map();
-
-  reviewTokens.forEach((token) => {
-    const existing = reviewMap.get(token.prescriptionId) || [];
-    existing.push(token);
-    reviewMap.set(token.prescriptionId, existing);
-  });
-
-  return prescriptions.map((prescription) => {
-    const reviewHistory = (reviewMap.get(prescription.id) || []).map(
-      toReviewHistoryEntry,
-    );
-    const latestReview = reviewHistory[0] || null;
-
-    return {
-      ...prescription.toJSON(),
-      reviewHistory,
-      latestReview,
-      reviewSummary: {
-        hasBeenSent: reviewHistory.length > 0,
-        totalSent: reviewHistory.length,
-        latestStatus: latestReview?.status || "not_sent",
-        latestDecision: latestReview?.decision || null,
-        latestSentAt: latestReview?.sentAt || null,
-        latestReviewedAt: latestReview?.usedAt || null,
-      },
-    };
-  });
+const serializePrescriber = (prescriber) => {
+  const plain = prescriber?.toJSON ? prescriber.toJSON() : prescriber;
+  return plain;
 };
 
 export const listPrescribers = async (req, res) => {
@@ -107,7 +28,8 @@ export const listPrescribers = async (req, res) => {
     const where = q
       ? {
           [Op.or]: [
-            { name: { [Op.iLike]: `%${q}%` } },
+            { firstName: { [Op.iLike]: `%${q}%` } },
+            { lastName: { [Op.iLike]: `%${q}%` } },
             { contact: { [Op.iLike]: `%${q}%` } },
             { email: { [Op.iLike]: `%${q}%` } },
             { npi: { [Op.iLike]: `%${q}%` } },
@@ -119,12 +41,12 @@ export const listPrescribers = async (req, res) => {
       where,
       limit,
       offset: (page - 1) * limit,
-      order: [["createdat", "DESC"]],
+      order: [["created_at", "DESC"]],
     });
 
     return res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map(serializePrescriber),
       pagination: {
         page,
         limit,
@@ -159,35 +81,28 @@ export const createPrescriber = async (req, res) => {
       });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-
     const existing = await Prescriber.findOne({
-      where: {
-        [Op.or]: [{ email: normalizedEmail }, { npi: normalizedNpi }],
-      },
+      where: { npi: normalizedNpi },
     });
 
     if (existing) {
       return res.status(409).json({
         success: false,
-        message:
-          existing.email === normalizedEmail
-            ? "A prescriber with this email already exists."
-            : "A prescriber with this NPI already exists.",
+        message: "A prescriber with this NPI already exists.",
       });
     }
 
     const prescriber = await Prescriber.create({
       name: String(name).trim(),
       contact: String(contact).trim(),
-      email: normalizedEmail,
+      email: String(email).trim().toLowerCase(),
       npi: normalizedNpi,
     });
 
     return res.status(201).json({
       success: true,
       message: "Prescriber created successfully.",
-      data: prescriber,
+      data: serializePrescriber(prescriber),
     });
   } catch (error) {
     return res.status(500).json({
@@ -209,113 +124,56 @@ export const getPrescriberHistory = async (req, res) => {
       });
     }
 
-    const directMatches = await Prescription.findAll({
-      where: {
-        [Op.or]: [
-          {
-            fhirRaw: {
-              prescriber_id: prescriber.npi,
-            },
-          },
-          {
-            fhirRaw: {
-              prescriber_id: prescriber.email,
-            },
-          },
-          {
-            prescriberDisplay: {
-              [Op.iLike]: `%${prescriber.name}%`,
-            },
-          },
-        ],
-      },
+    const history = await Prescription.findAll({
+      where: { prescriberId: Number(id) },
       include: [
         {
           model: Patient,
           as: "patient",
-          attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
           required: false,
         },
       ],
-      order: [["createdat", "DESC"]],
+      order: [["created_at", "DESC"]],
     });
-
-    const reviewTokens = await PrescriptionReviewToken.findAll({
-      where: {
-        recipientEmail: prescriber.email,
-      },
-      order: [
-        ["sentAt", "DESC"],
-        ["createdat", "DESC"],
-      ],
-    });
-
-    const tokenPrescriptionIds = [
-      ...new Set(reviewTokens.map((token) => token.prescriptionId).filter(Boolean)),
-    ];
-
-    const tokenMatches = tokenPrescriptionIds.length
-      ? await Prescription.findAll({
-          where: {
-            id: {
-              [Op.in]: tokenPrescriptionIds,
-            },
+    const historyWithReview = await Promise.all(
+      history.map(async (item) => {
+        const serialized = item.toJSON ? item.toJSON() : item;
+        const reviewHistory = await listPrescriptionReviewRecords(item.id);
+        const latestReview = reviewHistory[0] || null;
+        return {
+          ...serialized,
+          reviewHistory: reviewHistory.map((record) => ({
+            ...record,
+            status: getReviewStatus(record),
+          })),
+          latestReview,
+          reviewSummary: {
+            latestStatus: getReviewStatus(latestReview),
+            latestSentAt: latestReview?.sentAt || null,
+            latestReviewedAt: latestReview?.usedAt || null,
           },
-          include: [
-            {
-              model: Patient,
-              as: "patient",
-              attributes: ["id", "firstName", "lastName", "patientNumber", "mrn"],
-              required: false,
-            },
-          ],
-          order: [["createdat", "DESC"]],
-        })
-      : [];
-
-    const mergedPrescriptions = [
-      ...new Map(
-        [...directMatches, ...tokenMatches].map((prescription) => [
-          prescription.id,
-          prescription,
-        ]),
-      ).values(),
-    ];
-
-    const history = await attachReviewHistory(mergedPrescriptions);
-    const counts = history.reduce(
-      (summary, item) => {
+        };
+      }),
+    );
+    const counts = historyWithReview.reduce(
+      (acc, item) => {
         const status = item.reviewSummary?.latestStatus || "not_sent";
-
-        if (status === "approved") {
-          summary.approved += 1;
-        } else if (status === "rejected") {
-          summary.rejected += 1;
-        } else if (status === "pending") {
-          summary.pending += 1;
-        } else if (status === "expired") {
-          summary.expired += 1;
-        } else {
-          summary.notSent += 1;
-        }
-
-        return summary;
+        if (status === "approved") acc.approved += 1;
+        else if (status === "rejected") acc.rejected += 1;
+        else if (status === "pending") acc.pending += 1;
+        else if (status === "expired") acc.expired += 1;
+        else acc.notSent += 1;
+        return acc;
       },
-      {
-        approved: 0,
-        rejected: 0,
-        pending: 0,
-        expired: 0,
-        notSent: 0,
-      },
+      { approved: 0, rejected: 0, pending: 0, expired: 0, notSent: 0 },
     );
 
     return res.status(200).json({
       success: true,
       data: {
-        prescriber,
+        prescriber: serializePrescriber(prescriber),
         counts,
-        history,
+        history: historyWithReview,
       },
     });
   } catch (error) {
@@ -338,23 +196,20 @@ export const updatePrescriber = async (req, res) => {
       });
     }
 
-    const { name, contact, email, npi } = req.body || {};
     const updates = {};
-
-    if (name !== undefined) {
-      updates.name = String(name).trim();
+    if (req.body.name !== undefined) {
+      updates.name = String(req.body.name).trim();
     }
-
-    if (contact !== undefined) {
-      updates.contact = String(contact).trim();
+    if (req.body.contact !== undefined) {
+      updates.contact = String(req.body.contact).trim();
     }
-
-    if (email !== undefined) {
-      updates.email = String(email).trim().toLowerCase();
+    if (req.body.email !== undefined) {
+      updates.email = req.body.email
+        ? String(req.body.email).trim().toLowerCase()
+        : null;
     }
-
-    if (npi !== undefined) {
-      const normalizedNpi = String(npi).trim();
+    if (req.body.npi !== undefined) {
+      const normalizedNpi = String(req.body.npi).trim();
       if (!/^\d{10}$/.test(normalizedNpi)) {
         return res.status(400).json({
           success: false,
@@ -364,27 +219,23 @@ export const updatePrescriber = async (req, res) => {
       updates.npi = normalizedNpi;
     }
 
-    const nextEmail = updates.email ?? prescriber.email;
-    const nextNpi = updates.npi ?? prescriber.npi;
-
-    const existing = await Prescriber.findOne({
-      where: {
-        id: { [Op.ne]: id },
-        [Op.or]: [{ email: nextEmail }, { npi: nextNpi }],
-      },
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        message:
-          existing.email === nextEmail
-            ? "A prescriber with this email already exists."
-            : "A prescriber with this NPI already exists.",
+    if (updates.npi) {
+      const existing = await Prescriber.findOne({
+        where: {
+          id: { [Op.ne]: Number(id) },
+          npi: updates.npi,
+        },
       });
+
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: "A prescriber with this NPI already exists.",
+        });
+      }
     }
 
-    const before = prescriber.toJSON();
+    const before = serializePrescriber(prescriber);
     await prescriber.update(updates);
 
     await writeAuditLog({
@@ -394,7 +245,7 @@ export const updatePrescriber = async (req, res) => {
       summary: `Updated prescriber ${prescriber.name}.`,
       metadata: {
         before,
-        after: prescriber.toJSON(),
+        after: serializePrescriber(prescriber),
       },
       ...buildActorContext(req),
     });
@@ -402,7 +253,7 @@ export const updatePrescriber = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Prescriber updated successfully.",
-      data: prescriber,
+      data: serializePrescriber(prescriber),
     });
   } catch (error) {
     return res.status(500).json({
@@ -424,12 +275,12 @@ export const deletePrescriber = async (req, res) => {
       });
     }
 
-    const snapshot = prescriber.toJSON();
+    const snapshot = serializePrescriber(prescriber);
     await prescriber.destroy();
 
     await writeAuditLog({
       entityType: "prescriber",
-      entityId: id,
+      entityId: Number(id),
       action: "deleted",
       summary: `Deleted prescriber ${snapshot.name}.`,
       metadata: snapshot,

@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { normalizeRole } from "../services/schemaCompatService.js";
 
 export const verifyToken = (req, res, next) => {
   // Get token from headers
@@ -25,19 +26,24 @@ export const verifyToken = (req, res, next) => {
 
 export const authorize = (roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    const normalizedUserRole = normalizeRole(req.user?.role);
+    const normalizedRoles = roles.map((role) => normalizeRole(role));
+
+    if (!normalizedRoles.includes(normalizedUserRole)) {
       return res.status(403).json({
         success: false,
         message: "Access denied, insufficient permissions",
       });
     }
+
+    req.user.role = normalizedUserRole;
     next();
   };
 };
 
 /** Only the pharmacist role may proceed (not admin or technician). */
 export const authorizePharmacistOnly = (req, res, next) => {
-  if (req.user?.role !== "pharmacist") {
+  if (normalizeRole(req.user?.role) !== "pharmacist") {
     return res.status(403).json({
       success: false,
       message: "Only pharmacists may perform this action.",

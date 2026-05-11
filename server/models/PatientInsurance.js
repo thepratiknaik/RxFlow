@@ -6,18 +6,17 @@ const PatientInsurance = sequelize.define(
   "PatientInsurance",
   {
     insurance_id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
     },
     patient_id: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "patients",
-        key: "id",
+        model: "patient",
+        key: "patient_id",
       },
-      onDelete: "CASCADE",
     },
     provider_name: {
       type: DataTypes.STRING,
@@ -29,7 +28,7 @@ const PatientInsurance = sequelize.define(
     },
     bin_number: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     pcn_number: {
       type: DataTypes.STRING,
@@ -37,17 +36,8 @@ const PatientInsurance = sequelize.define(
     },
   },
   {
-    tableName: "patient_insurances",
-    timestamps: true,
-    createdAt: "createdat",
-    updatedAt: "updatedat",
-    underscored: false,
-    indexes: [
-      {
-        fields: ["patient_id"],
-        name: "patient_insurances_patient_id_idx",
-      },
-    ],
+    tableName: "insurance",
+    timestamps: false,
   },
 );
 

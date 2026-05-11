@@ -236,6 +236,19 @@ class ApiService {
     });
   }
 
+  async createUser({ fullname, email, password, confirmPassword, role }) {
+    return await this.request(API_ENDPOINTS.AUTH.CREATE_USER, {
+      method: "POST",
+      body: JSON.stringify({
+        fullname,
+        email,
+        password,
+        confirmPassword,
+        role,
+      }),
+    });
+  }
+
   async updateUserRole(id, role) {
     return await this.request(API_ENDPOINTS.AUTH.USER_ROLE(id), {
       method: "PATCH",
@@ -255,6 +268,30 @@ class ApiService {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+  }
+
+  async getPharmacy() {
+    return await this.request(API_ENDPOINTS.PHARMACY.DETAIL, {
+      method: "GET",
+    });
+  }
+
+  async updatePharmacy(data) {
+    return await this.request(API_ENDPOINTS.PHARMACY.UPDATE, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async setupPharmacy(data) {
+    const result = await this.request(API_ENDPOINTS.PHARMACY.SETUP, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (result?.user) {
+      this.storeAuth(result);
+    }
+    return result;
   }
 
   async listDrugs({ page = 1, limit = 20, search = "" } = {}) {
@@ -407,6 +444,14 @@ class ApiService {
     );
   }
 
+  async listPatientPrescriptions(patientId) {
+    const params = new URLSearchParams({ patientId: String(patientId), limit: "100", page: "1" });
+    return await this.request(
+      `${API_ENDPOINTS.PRESCRIPTIONS.LIST}?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
   async getPrescription(id) {
     return await this.request(API_ENDPOINTS.PRESCRIPTIONS.DETAIL(id), {
       method: "GET",
@@ -457,6 +502,49 @@ class ApiService {
     return await this.request(API_ENDPOINTS.PRESCRIPTIONS.SEND_FOR_REVIEW(id), {
       method: "POST",
       body: JSON.stringify({}),
+    });
+  }
+
+  async getDrugAvailability(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.DRUG_AVAILABILITY(id), {
+      method: "GET",
+    });
+  }
+
+  async getPrescriptionLots(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.LOTS(id), {
+      method: "GET",
+    });
+  }
+
+  async assignItemLot(prescriptionId, itemId, { lotId, quantity } = {}) {
+    return await this.request(
+      API_ENDPOINTS.PRESCRIPTIONS.ASSIGN_ITEM_LOT(prescriptionId, itemId),
+      {
+        method: "PATCH",
+        body: JSON.stringify({ lotId: lotId || null, quantity: quantity || null }),
+      },
+    );
+  }
+
+  async markPrescriptionReady(id, lotId) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.MARK_READY(id), {
+      method: "POST",
+      body: JSON.stringify(lotId ? { lotId } : {}),
+    });
+  }
+
+  async markPrescriptionPickedUp(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.MARK_PICKED_UP(id), {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  }
+
+  async cancelPrescription(id, reason) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.CANCEL(id), {
+      method: "POST",
+      body: JSON.stringify({ reason }),
     });
   }
 
@@ -602,6 +690,32 @@ class ApiService {
         method: "GET",
       },
     );
+  }
+
+  async getBillingPlans() {
+    return await this.request(API_ENDPOINTS.BILLING.PLANS, { method: "GET" });
+  }
+
+  async getBillingSubscription() {
+    return await this.request(API_ENDPOINTS.BILLING.SUBSCRIPTION, { method: "GET" });
+  }
+
+  async createCheckoutSession(planId, successUrl, cancelUrl) {
+    return await this.request(API_ENDPOINTS.BILLING.CHECKOUT, {
+      method: "POST",
+      body: JSON.stringify({ planId, successUrl, cancelUrl }),
+    });
+  }
+
+  async createPortalSession() {
+    return await this.request(API_ENDPOINTS.BILLING.PORTAL, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  }
+
+  async listBillingInvoices() {
+    return await this.request(API_ENDPOINTS.BILLING.INVOICES, { method: "GET" });
   }
 
   getToken() {

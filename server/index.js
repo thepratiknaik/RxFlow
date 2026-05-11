@@ -13,15 +13,14 @@ import connectDB from "./config/db.js";
 import { buildApiDocs } from "./docs/apiDocs.js";
 import "./models/User.js";
 import "./models/Drug.js";
-import "./models/DrugPullAudit.js";
 import "./models/Patient.js";
-import "./models/PatientAudit.js"; // This imports PatientAuditLog
+import "./models/Pharmacy.js";
 import "./models/PatientInsurance.js";
 import "./models/Prescription.js";
-import "./models/PrescriptionReviewToken.js";
 import "./models/InventoryLot.js";
 import "./models/Prescriber.js";
 import "./models/AuditLog.js";
+import "./models/Invoice.js";
 import { startDrugPullWorker } from "./workers/drugPullWorker.js";
 
 const app = express();
@@ -68,7 +67,10 @@ const startServer = async () => {
 
     // Middleware
     app.use(cors());
-    app.use(express.json());
+    // Preserve raw body for Stripe webhook signature verification
+    app.use(express.json({
+      verify: (req, _res, buf) => { req.rawBody = buf; },
+    }));
     app.use(express.urlencoded({ extended: true }));
 
     // Request logging middleware

@@ -1,6 +1,8 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
-import { Op } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
+import { normalizeRole } from "../services/schemaCompatService.js";
+import { sequelize } from "../config/db.js";
 
 // Generate JWT Token
 const generateToken = (id, role) => {
@@ -40,11 +42,13 @@ export const register = async (req, res) => {
       });
     }
 
-    // Create user
+    // Create user (admin signup, no pharmacy assigned yet)
     const user = await User.create({
       fullname,
       email,
       password,
+      role: normalizeRole("admin"),
+      pharmacyId: null,
     });
 
     // Generate token
@@ -60,6 +64,7 @@ export const register = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
       },
     });
@@ -115,10 +120,6 @@ export const login = async (req, res) => {
       });
     }
 
-    // Update last login
-    user.lastlogin = new Date();
-    await user.save();
-
     // Generate token
     const token = generateToken(user.id, user.role);
 
@@ -132,6 +133,7 @@ export const login = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
       },
     });
@@ -158,10 +160,11 @@ export const getMe = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
-        lastlogin: user.lastlogin,
-        createdat: user.createdat,
-        updatedat: user.updatedat,
+        lastlogin: null,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
       },
     });
   } catch (error) {
@@ -226,14 +229,19 @@ export const resetPassword = async (req, res) => {
 // @access  Admin
 export const listUsers = async (req, res) => {
   try {
+    const actor = await User.findByPk(req.user.id);
+    if (!actor) {
+      return res.status(404).json({
+        success: false,
+        message: "Requesting user not found.",
+      });
+    }
+
     const search = String(req.query.q || "").trim();
-    const where = {};
+    const where = { pharmacyId: actor.pharmacyId };
 
     if (search) {
-      where[Op.or] = [
-        { fullname: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } },
-      ];
+      where[Op.or] = [{ email: { [Op.iLike]: `%${search}%` } }];
     }
 
     const users = await User.findAll({
@@ -242,19 +250,29 @@ export const listUsers = async (req, res) => {
         "id",
         "fullname",
         "email",
-        "role",
         "isactive",
-        "lastlogin",
-        "createdat",
-        "updatedat",
+        "pharmacyId",
+        "roleId",
+        "created_at",
+        "updated_at",
       ],
-      order: [["createdat", "DESC"]],
+      order: [["created_at", "DESC"]],
     });
 
     res.status(200).json({
       success: true,
       count: users.length,
-      users,
+      users: users.map((user) => ({
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+        pharmacyId: user.pharmacyId,
+        isactive: user.isactive,
+        lastlogin: null,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+      })),
     });
   } catch (error) {
     console.error("List users error:", error);
@@ -280,7 +298,7 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
-    if (!["user", "pharmacist", "admin"].includes(role)) {
+    if (!["technician", "pharmacist", "admin", "user"].includes(role)) {
       return res.status(400).json({
         success: false,
         message: "Invalid role provided",
@@ -303,7 +321,7 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
-    user.role = role;
+    user.role = normalizeRole(role);
     await user.save();
 
     res.status(200).json({
@@ -314,10 +332,11 @@ export const updateUserRole = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        pharmacyId: user.pharmacyId,
         isactive: user.isactive,
-        lastlogin: user.lastlogin,
-        createdat: user.createdat,
-        updatedat: user.updatedat,
+        lastlogin: null,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
       },
     });
   } catch (error) {
@@ -325,6 +344,163 @@ export const updateUserRole = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error updating user role",
+    });
+  }
+};
+
+// @desc    Create a new user as admin
+// @route   POST /api/auth/users
+// @access  Admin
+// @desc    Setup pharmacy for admin user during onboarding
+// @route   POST /api/auth/setup-pharmacy
+// @access  Admin
+export const setupPharmacy = async (req, res) => {
+  try {
+    const { name, licenseNumber } = req.body;
+    const adminId = req.user?.id;
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authenticated",
+      });
+    }
+
+    if (!name || !licenseNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Pharmacy name and license number are required",
+      });
+    }
+
+    // Create pharmacy for this admin
+    const pharmacyResult = await sequelize.query(
+      `
+        INSERT INTO pharmacy (name, license_number, subscription_tier, status_id)
+        SELECT :name, :licenseNumber, 'Standard', id
+        FROM pharmacy_status
+        WHERE lower(status) = 'active'
+        LIMIT 1
+        RETURNING pharmacy_id
+      `,
+      {
+        replacements: {
+          name: String(name).trim(),
+          licenseNumber: String(licenseNumber).trim(),
+        },
+        type: QueryTypes.INSERT,
+      },
+    );
+
+    const pharmacyId = pharmacyResult?.[0]?.[0]?.pharmacy_id;
+    if (!pharmacyId) {
+      throw new Error("Failed to create pharmacy");
+    }
+
+    // Assign pharmacy to admin user
+    const user = await User.findByPk(adminId);
+    if (user) {
+      user.pharmacyId = pharmacyId;
+      await user.save();
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Pharmacy setup complete",
+      pharmacy: {
+        id: pharmacyId,
+        name,
+        licenseNumber,
+      },
+      user: {
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+        isactive: user.isactive,
+        pharmacyId: user.pharmacyId,
+      },
+    });
+  } catch (error) {
+    console.error("Setup pharmacy error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error setting up pharmacy",
+    });
+  }
+};
+
+export const createUser = async (req, res) => {
+  try {
+    const { fullname, email, password, confirmPassword, role } = req.body;
+
+    if (!fullname || !email || !password || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required fields",
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match",
+      });
+    }
+
+    const nextRole = normalizeRole(role || "technician");
+
+    if (!["technician", "pharmacist", "admin"].includes(nextRole)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role provided",
+      });
+    }
+
+    const userExists = await User.findOne({ where: { email } });
+    if (userExists) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
+
+    const actor = await User.findByPk(req.user.id);
+    if (!actor) {
+      return res.status(404).json({
+        success: false,
+        message: "Requesting user not found.",
+      });
+    }
+
+    const user = await User.create({
+      fullname,
+      email,
+      password,
+      role: nextRole,
+      pharmacyId: actor.pharmacyId,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      user: {
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+        pharmacyId: user.pharmacyId,
+        isactive: user.isactive,
+        lastlogin: null,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error("Create user error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error creating user",
     });
   }
 };

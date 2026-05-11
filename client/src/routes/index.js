@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import WebsitePage from "../modules/website/WebsitePage";
 import LoginPage from "../modules/auth/LoginPage";
 import SignupPage from "../modules/auth/SignupPage";
+import OnboardingPage from "../modules/auth/OnboardingPage";
 import DashboardPage from "../modules/dashboard/DashboardPage";
 import ResetPasswordPage from "../modules/auth/ResetPasswordPage";
 import ProfilePage from "../modules/profile/ProfilePage";
@@ -15,6 +16,7 @@ import AdminRoute from "../components/AdminRoute.js";
 import { AuthProvider } from "../context/AuthContext.js";
 import { ROUTES } from "../config/routes.js";
 import UsersPage from "../modules/admin/UsersPage.js";
+import BillingPage from "../modules/billing/BillingPage.js";
 
 const AppRoutes = () => {
   return (
@@ -24,6 +26,16 @@ const AppRoutes = () => {
           <Route path={ROUTES.HOME} element={<WebsitePage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
+          <Route
+            path={ROUTES.ONBOARDING}
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <OnboardingPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
           <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
           <Route
             path={ROUTES.PROFILE}
@@ -83,6 +95,16 @@ const AppRoutes = () => {
               <ProtectedRoute>
                 <AdminRoute>
                   <UsersPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.BILLING}
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <BillingPage />
                 </AdminRoute>
               </ProtectedRoute>
             }
