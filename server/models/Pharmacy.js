@@ -23,7 +23,24 @@ const Pharmacy = sequelize.define(
     subscriptionTier: {
       type: DataTypes.STRING,
       allowNull: false,
+      defaultValue: "free",
       field: "subscription_tier",
+    },
+    subscriptionStatus: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "inactive",
+      field: "subscription_status",
+    },
+    stripeCustomerId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "stripe_customer_id",
+    },
+    stripeSubscriptionId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "stripe_subscription_id",
     },
     statusId: {
       type: DataTypes.INTEGER,

@@ -1,9 +1,11 @@
 import express from "express";
 import {
   approvePrescriptionEtIn,
+  assignItemLot,
   cancelPrescription,
   createPrescriptionEntry,
   createPrescriptionManual,
+  getDrugAvailability,
   getLotsForPrescription,
   getPrescription,
   listPrescriptions,
@@ -15,7 +17,6 @@ import {
 import { sendPrescriptionForReview } from "../controllers/prescriptionReviewController.js";
 import {
   authorize,
-  authorizePharmacistOnly,
   verifyToken,
 } from "../middleware/auth.js";
 
@@ -59,7 +60,7 @@ router.post(
 router.post(
   "/:id/approve-et-in",
   verifyToken,
-  authorizePharmacistOnly,
+  authorize(["pharmacist", "admin"]),
   approvePrescriptionEtIn,
 );
 
@@ -76,9 +77,22 @@ router.put(
   patchPrescriptionInsurance,
 );
 
-router.get("/:id/lots", verifyToken, authorizePharmacistOnly, getLotsForPrescription);
+router.get("/:id/drug-availability", verifyToken, getDrugAvailability);
+router.get("/:id/lots", verifyToken, authorize(["pharmacist", "admin"]), getLotsForPrescription);
+router.patch(
+  "/:id/items/:itemId/assign-lot",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  assignItemLot,
+);
+router.put(
+  "/:id/items/:itemId/assign-lot",
+  verifyToken,
+  authorize(["pharmacist", "admin"]),
+  assignItemLot,
+);
 
-router.post("/:id/ready", verifyToken, authorizePharmacistOnly, markPrescriptionReady);
+router.post("/:id/ready", verifyToken, authorize(["pharmacist", "admin"]), markPrescriptionReady);
 
 router.post(
   "/:id/picked-up",

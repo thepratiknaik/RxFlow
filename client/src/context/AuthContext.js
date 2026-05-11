@@ -119,7 +119,9 @@ export const AuthProvider = ({ children }) => {
 
   const setupPharmacy = async (data) => {
     const result = await api.setupPharmacy(data);
-    setUser(result.user);
+    if (result?.user) {
+      setUser(result.user);
+    }
     setNeedsOnboarding(false);
     return result;
   };

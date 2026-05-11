@@ -14,7 +14,7 @@ import {
 import { getPrescriptionStatusId } from "../services/schemaCompatService.js";
 
 const REVIEW_DECISION_STATUS = {
-  approved: "ready",
+  approved: "in_process",
   rejected: "new",
 };
 

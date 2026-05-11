@@ -20,7 +20,8 @@
 .app-header-left h2 {
   margin: 0;
   color: var(--text-dark);
-  font-size: 1.18rem;
+  /* font-size: 1.18rem; */
+  font-size: 1.55rem;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -35,8 +36,8 @@
 }
 
 .app-header-logo-image {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   object-fit: cover;
   border: 1px solid var(--medium-gray);

@@ -26,11 +26,7 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
-  if (
-    needsOnboarding &&
-    location.pathname !== ROUTES.ONBOARDING &&
-    location.pathname !== ROUTES.ADMIN_USERS
-  ) {
+  if (needsOnboarding && location.pathname !== ROUTES.ONBOARDING) {
     return <Navigate to={ROUTES.ONBOARDING} replace />;
   }
 

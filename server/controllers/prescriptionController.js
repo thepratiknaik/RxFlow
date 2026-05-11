@@ -20,7 +20,16 @@ import {
   getPrescriptionStatusId,
   normalizePrescriptionStatus,
 } from "../services/schemaCompatService.js";
-import { dispensePrescription, getLotsForDrug } from "../services/dispensingService.js";
+import { getLotsForDrug } from "../services/dispensingService.js";
+import { Op } from "sequelize";
+import { sequelize } from "../config/db.js";
+import PrescriptionItem from "../models/PrescriptionItem.js";
+import InventoryLot from "../models/InventoryLot.js";
+
+// Associations (idempotent — safe to re-declare)
+Prescription.hasMany(PrescriptionItem, { foreignKey: "prescriptionId", as: "items" });
+PrescriptionItem.belongsTo(Drug, { foreignKey: "drugId", as: "drug" });
+PrescriptionItem.belongsTo(InventoryLot, { foreignKey: "lotId", as: "lot" });
 
 const toLimit = (value, fallback = 25, max = 100) =>
   Math.min(Math.max(Number(value) || fallback, 1), max);
@@ -52,13 +61,45 @@ const hasClientProvidedPrescriptionId = (payload) =>
 const loadPrescriptionWithPatient = async (id) =>
   await Prescription.findByPk(id, {
     include: [
+      { model: Patient, as: "patient", required: false },
       {
-        model: Patient,
-        as: "patient",
+        model: PrescriptionItem,
+        as: "items",
         required: false,
+        include: [
+          { model: Drug, as: "drug", required: false },
+          { model: InventoryLot, as: "lot", required: false },
+        ],
       },
     ],
   });
+
+const serializeItems = (rawItems) =>
+  (rawItems || []).map((item) => ({
+    id: item.id,
+    drugId: item.drugId,
+    quantity: item.quantity,
+    lotId: item.lotId || null,
+    quantityBlocked: item.quantityBlocked || 0,
+    drug: item.drug
+      ? {
+          id: item.drug.id,
+          brandname: item.drug.brandname,
+          genericname: item.drug.genericname,
+          dosageform: item.drug.dosageform,
+          route: item.drug.route,
+          ndc: item.drug.productndc,
+        }
+      : null,
+    lot: item.lot
+      ? {
+          id: item.lot.id,
+          lotNumber: item.lot.lotNumber,
+          expiryDate: item.lot.expiryDate,
+          quantityOnHand: item.lot.quantityOnHand,
+        }
+      : null,
+  }));
 
 const serializePrescription = async (prescription) => {
   const plain = prescription.toJSON();
@@ -75,21 +116,24 @@ const serializePrescription = async (prescription) => {
   }));
   const latestReview = reviewHistory[0] || null;
 
+  const items = serializeItems(prescription.items);
+  const drugNames = items.length
+    ? items.map((i) => i.drug?.brandname || i.drug?.genericname || `Drug ${i.drugId}`)
+    : [drug?.brandname || drug?.genericname || drug?.productndc || `Drug ${prescription.drugId}`];
+
   return {
     ...plain,
     prescriptionNumber: String(prescription.id),
-    medicationDisplay:
-      drug?.brandname || drug?.genericname || drug?.productndc || `Drug ${prescription.drugId}`,
+    medicationDisplay: drugNames.join(", "),
     quantityValue: prescription.quantity,
+    items,
     reviewHistory,
     latestReview,
     reviewSummary: buildPrescriptionReviewSummary(reviewRecords),
     fhirRaw: {
       pharmacy_id: prescription.pharmacyId,
       prescriber_id: prescriber?.npi || String(prescription.prescriberId),
-      drug_name: [
-        drug?.brandname || drug?.genericname || drug?.productndc || `Drug ${prescription.drugId}`,
-      ],
+      drug_name: drugNames,
       entered_by: enteredBy?.fullname || `User ${prescription.enteredById}`,
       verified_by: verifiedBy?.fullname || null,
     },
@@ -269,6 +313,7 @@ export const createPrescriptionEntry = async (req, res) => {
     const {
       patient_id,
       prescriber_id,
+      drug_items,
       drug_name,
       status,
       quantity,
@@ -276,50 +321,42 @@ export const createPrescriptionEntry = async (req, res) => {
     } = req.body || {};
 
     if (!patient_id) {
-      return res.status(400).json({
-        success: false,
-        message: "patient_id is required.",
-      });
+      return res.status(400).json({ success: false, message: "patient_id is required." });
     }
 
     const patient = await Patient.findByPk(patient_id);
     if (!patient) {
-      return res.status(400).json({
-        success: false,
-        message: "Patient not found for patient_id.",
-      });
+      return res.status(400).json({ success: false, message: "Patient not found for patient_id." });
     }
 
-    const drugNameArray = Array.isArray(drug_name)
-      ? drug_name.map((value) => String(value || "").trim()).filter(Boolean)
-      : [];
+    // Support new drug_items format: [{ name, quantity }]
+    // Fall back to legacy drug_name array + quantity for backwards compat
+    let items = [];
+    if (Array.isArray(drug_items) && drug_items.length > 0) {
+      items = drug_items
+        .filter((item) => item?.name && String(item.name).trim())
+        .map((item) => ({
+          name: String(item.name).trim(),
+          quantity: Number(item.quantity) > 0 ? Math.round(Number(item.quantity)) : 1,
+        }));
+    } else {
+      const drugNameArray = Array.isArray(drug_name)
+        ? drug_name.map((v) => String(v || "").trim()).filter(Boolean)
+        : [];
+      const qty = Number(quantity) > 0 ? Math.round(Number(quantity)) : 1;
+      items = drugNameArray.map((name) => ({ name, quantity: qty }));
+    }
 
-    if (!drugNameArray.length) {
-      return res.status(400).json({
-        success: false,
-        message: "drug_name must be a non-empty array of drug names.",
-      });
+    if (!items.length) {
+      return res.status(400).json({ success: false, message: "At least one drug item is required." });
     }
 
     const normalizedStatus = normalizePrescriptionStatus(
       STATUS_MAP[String(status || "New").trim()] || status || "new",
     );
-    const normalizedQuantity = Number(quantity);
-
-    if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "quantity must be a positive number.",
-      });
-    }
-
     const prescriberRef = await ensurePrescriberByDescriptor({
       npi: prescriber_id || null,
       name: prescriber_id || "Prescription Prescriber",
-    });
-    const drugRef = await ensureDrugByDescriptor({
-      brandName: drugNameArray[0],
-      genericName: drugNameArray[0],
     });
     const statusId = await getPrescriptionStatusId(normalizedStatus);
 
@@ -329,31 +366,58 @@ export const createPrescriptionEntry = async (req, res) => {
       verifiedById = user?.id || null;
     }
 
+    // Resolve drug IDs for all items up front
+    const resolvedItems = [];
+    for (const item of items) {
+      const drugId = await ensureDrugByDescriptor({
+        brandName: item.name,
+        genericName: item.name,
+      });
+      resolvedItems.push({ ...item, drugId });
+    }
+
+    // Create ONE prescription using the first drug as the primary reference
+    const firstItem = resolvedItems[0];
     const prescription = await Prescription.create({
       patientId: Number(patient_id),
       prescriberId: prescriberRef,
-      drugId: drugRef,
+      drugId: firstItem.drugId,
       insuranceId: null,
       status: normalizedStatus,
       statusId,
-      quantity: Math.round(normalizedQuantity),
+      quantity: firstItem.quantity,
       enteredById: req.user?.id || 1,
       verifiedById,
     });
+
+    // Create a PrescriptionItem row for every drug
+    await Promise.all(
+      resolvedItems.map((item) =>
+        PrescriptionItem.create({
+          prescriptionId: prescription.id,
+          drugId: item.drugId,
+          quantity: item.quantity,
+          lotId: null,
+          quantityBlocked: 0,
+        }),
+      ),
+    );
+
+    const fullPrescription = await loadPrescriptionWithPatient(prescription.id);
 
     await writeAuditLog({
       entityType: "prescription",
       entityId: prescription.id,
       action: "created",
-      summary: `Created prescription ${prescription.id}.`,
-      metadata: await toPrescriptionEntryResponse(prescription),
+      summary: `Created prescription ${prescription.id} with ${resolvedItems.length} drug item(s).`,
+      metadata: await serializePrescription(fullPrescription),
       ...buildActorContext(req),
     });
 
     return res.status(201).json({
       success: true,
-      message: "Prescription entry created successfully.",
-      data: await toPrescriptionEntryResponse(prescription),
+      message: "Prescription created successfully.",
+      data: await serializePrescription(fullPrescription),
     });
   } catch (error) {
     return res.status(500).json({
@@ -457,6 +521,198 @@ export const patchPrescriptionInsurance = async (req, res) => {
   }
 };
 
+// Helper shared by getDrugAvailability and assignItemLot
+const checkDrugAvailability = async (drug) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const allLots = await InventoryLot.findAll({ where: { drugId: drug.id } });
+  const activeLots = allLots
+    .map((l) => ({
+      id: l.id,
+      lotNumber: l.lotNumber,
+      expiryDate: l.expiryDate,
+      quantityOnHand: l.quantityOnHand,
+      expired: new Date(l.expiryDate) < today,
+    }))
+    .filter((l) => !l.expired && l.quantityOnHand > 0);
+
+  let alternatives = [];
+  if (activeLots.length === 0 && drug.genericname) {
+    const sameName = String(drug.genericname).trim().toLowerCase();
+    const altDrugs = await Drug.findAll({ where: { id: { [Op.ne]: drug.id } } });
+    const matchingDrugs = altDrugs.filter(
+      (d) =>
+        String(d.genericname || "").trim().toLowerCase() === sameName ||
+        String(d.brandname || "").trim().toLowerCase() === sameName,
+    );
+    for (const altDrug of matchingDrugs) {
+      const altLots = await InventoryLot.findAll({ where: { drugId: altDrug.id } });
+      const altActive = altLots.filter(
+        (l) => new Date(l.expiryDate) >= today && l.quantityOnHand > 0,
+      );
+      if (altActive.length > 0) {
+        alternatives.push({
+          drug: {
+            id: altDrug.id,
+            brandname: altDrug.brandname,
+            genericname: altDrug.genericname,
+            dosageform: altDrug.dosageform,
+            route: altDrug.route,
+          },
+          lots: altActive.map((l) => ({
+            id: l.id,
+            lotNumber: l.lotNumber,
+            expiryDate: l.expiryDate,
+            quantityOnHand: l.quantityOnHand,
+          })),
+        });
+      }
+    }
+  }
+
+  return {
+    drug: {
+      id: drug.id,
+      brandname: drug.brandname,
+      genericname: drug.genericname,
+      dosageform: drug.dosageform,
+      route: drug.route,
+      ndc: drug.productndc,
+    },
+    available: activeLots.length > 0,
+    lots: activeLots,
+    alternatives,
+  };
+};
+
+export const getDrugAvailability = async (req, res) => {
+  try {
+    const prescription = await loadPrescriptionWithPatient(req.params.id);
+    if (!prescription) {
+      return res.status(404).json({ success: false, message: "Prescription not found." });
+    }
+
+    // Per-item availability (new multi-drug model)
+    const prescriptionItems = prescription.items || [];
+    const itemAvailability = await Promise.all(
+      prescriptionItems.map(async (item) => {
+        if (!item.drug) return null;
+        const avail = await checkDrugAvailability(item.drug);
+        return {
+          itemId: item.id,
+          drugId: item.drugId,
+          quantity: item.quantity,
+          quantityBlocked: item.quantityBlocked || 0,
+          lotId: item.lotId || null,
+          lot: item.lot
+            ? {
+                id: item.lot.id,
+                lotNumber: item.lot.lotNumber,
+                expiryDate: item.lot.expiryDate,
+                quantityOnHand: item.lot.quantityOnHand,
+              }
+            : null,
+          ...avail,
+        };
+      }),
+    );
+
+    // Legacy primary-drug fields for backward compat
+    const primaryDrug = await Drug.findByPk(prescription.drugId);
+    const primaryAvail = primaryDrug ? await checkDrugAvailability(primaryDrug) : null;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        drug: primaryAvail?.drug || null,
+        available: primaryAvail?.available || false,
+        lots: primaryAvail?.lots || [],
+        alternatives: primaryAvail?.alternatives || [],
+        items: itemAvailability.filter(Boolean),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || "Failed to check drug availability." });
+  }
+};
+
+export const assignItemLot = async (req, res) => {
+  try {
+    const { id, itemId } = req.params;
+    const { lotId, quantity } = req.body || {};
+
+    const prescription = await Prescription.findByPk(id);
+    if (!prescription) {
+      return res.status(404).json({ success: false, message: "Prescription not found." });
+    }
+
+    if (prescription.status !== "in_process") {
+      return res.status(400).json({
+        success: false,
+        message: "Lots can only be assigned while the prescription is In Process.",
+      });
+    }
+
+    const item = await PrescriptionItem.findOne({ where: { id: Number(itemId), prescriptionId: Number(id) } });
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Prescription item not found." });
+    }
+
+    // Clear assignment when lotId is absent/null
+    if (!lotId) {
+      item.lotId = null;
+      item.quantityBlocked = 0;
+      await item.save();
+      return res.status(200).json({
+        success: true,
+        message: "Lot assignment cleared.",
+        data: await serializePrescription(await loadPrescriptionWithPatient(prescription.id)),
+      });
+    }
+
+    const lot = await InventoryLot.findByPk(Number(lotId));
+    if (!lot) {
+      return res.status(404).json({ success: false, message: "Inventory lot not found." });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (new Date(lot.expiryDate) < today) {
+      return res.status(400).json({ success: false, message: "Cannot assign an expired lot." });
+    }
+
+    const blockQty = Number(quantity) > 0 ? Math.round(Number(quantity)) : item.quantity;
+    if (lot.quantityOnHand < blockQty) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient stock. Requested ${blockQty} but only ${lot.quantityOnHand} available in lot ${lot.lotNumber}.`,
+      });
+    }
+
+    item.lotId = lot.id;
+    item.quantityBlocked = blockQty;
+    await item.save();
+
+    await writeAuditLog({
+      entityType: "prescription",
+      entityId: prescription.id,
+      action: "updated",
+      summary: `Assigned lot ${lot.lotNumber} to item ${item.id} on prescription ${prescription.id} — ${blockQty} units blocked.`,
+      metadata: { prescriptionId: prescription.id, itemId: item.id, lotId: lot.id, quantity: blockQty },
+      ...buildActorContext(req),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Lot ${lot.lotNumber} assigned — ${blockQty} units blocked.`,
+      data: await serializePrescription(await loadPrescriptionWithPatient(prescription.id)),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || "Failed to assign lot." });
+  }
+};
+
 export const getLotsForPrescription = async (req, res) => {
   try {
     const prescription = await Prescription.findByPk(req.params.id);
@@ -473,7 +729,7 @@ export const getLotsForPrescription = async (req, res) => {
 
 export const markPrescriptionReady = async (req, res) => {
   try {
-    const prescription = await Prescription.findByPk(req.params.id);
+    const prescription = await loadPrescriptionWithPatient(req.params.id);
 
     if (!prescription) {
       return res.status(404).json({ success: false, message: "Prescription not found." });
@@ -486,26 +742,46 @@ export const markPrescriptionReady = async (req, res) => {
       });
     }
 
-    const { lotId } = req.body || {};
-    if (lotId) {
-      await dispensePrescription({
-        prescriptionId: prescription.id,
-        lotId: Number(lotId),
-        quantity: prescription.quantity,
-        req,
-      });
-    }
+    const itemsToDeduct = (prescription.items || []).filter(
+      (item) => item.lotId && item.quantityBlocked > 0,
+    );
 
-    prescription.statusId = await getPrescriptionStatusId("ready");
-    prescription.status = "ready";
-    await prescription.save();
+    await sequelize.transaction(async (t) => {
+      for (const item of itemsToDeduct) {
+        const lot = await InventoryLot.findByPk(item.lotId, { lock: t.LOCK.UPDATE, transaction: t });
+        if (!lot) {
+          throw Object.assign(new Error(`Lot ${item.lotId} not found.`), { status: 400 });
+        }
+        if (lot.quantityOnHand < item.quantityBlocked) {
+          throw Object.assign(
+            new Error(
+              `Insufficient stock in lot ${lot.lotNumber}. Required: ${item.quantityBlocked}, available: ${lot.quantityOnHand}.`,
+            ),
+            { status: 400 },
+          );
+        }
+        lot.quantityOnHand -= item.quantityBlocked;
+        await lot.save({ transaction: t });
+      }
+
+      prescription.statusId = await getPrescriptionStatusId("ready");
+      prescription.status = "ready";
+      await prescription.save({ transaction: t });
+    });
 
     await writeAuditLog({
       entityType: "prescription",
       entityId: prescription.id,
       action: "marked_ready",
-      summary: `Prescription ${prescription.id} marked as Ready for pickup.`,
-      metadata: { prescriptionId: prescription.id, lotId: lotId || null },
+      summary: `Prescription ${prescription.id} marked as Ready. ${itemsToDeduct.length} lot deduction(s) applied.`,
+      metadata: {
+        prescriptionId: prescription.id,
+        deductions: itemsToDeduct.map((i) => ({
+          itemId: i.id,
+          lotId: i.lotId,
+          quantity: i.quantityBlocked,
+        })),
+      },
       ...buildActorContext(req),
     });
 
@@ -560,7 +836,7 @@ export const markPrescriptionPickedUp = async (req, res) => {
 
 export const cancelPrescription = async (req, res) => {
   try {
-    const prescription = await Prescription.findByPk(req.params.id);
+    const prescription = await loadPrescriptionWithPatient(req.params.id);
 
     if (!prescription) {
       return res.status(404).json({ success: false, message: "Prescription not found." });
@@ -574,6 +850,18 @@ export const cancelPrescription = async (req, res) => {
     }
 
     const reason = String(req.body?.reason || "").trim() || "No reason provided.";
+
+    // Release any blocked lot quantities on items
+    await Promise.all(
+      (prescription.items || []).map((item) => {
+        if (item.lotId || item.quantityBlocked > 0) {
+          item.lotId = null;
+          item.quantityBlocked = 0;
+          return item.save();
+        }
+        return Promise.resolve();
+      }),
+    );
 
     prescription.statusId = await getPrescriptionStatusId("cancelled");
     prescription.status = "cancelled";

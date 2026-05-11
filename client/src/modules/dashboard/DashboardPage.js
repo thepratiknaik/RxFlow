@@ -3,6 +3,7 @@ import AppShell from "../../components/AppShell.js";
 import Card from "../../components/Card.js";
 import EmptyState from "../../components/EmptyState.js";
 import api from "../../services/api.js";
+import { formatPhone } from "../../utils/formatters.js";
 import "./DashboardPage.css";
 
 const formatDateTime = (value) => {
@@ -14,17 +15,11 @@ const formatDateTime = (value) => {
 };
 
 const DashboardPage = () => {
-  const currentUser = api.getUser();
-  const canViewAuditLogs = ["pharmacist", "admin"].includes(
-    String(currentUser?.role || "").toLowerCase(),
-  );
-
   const [summary, setSummary] = React.useState({
     prescriptions: [],
     lots: [],
     lotSummary: { belowThresholdTotal: 0, totalLotRows: 0 },
     patients: [],
-    audits: [],
   });
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
@@ -34,30 +29,28 @@ const DashboardPage = () => {
     setError("");
 
     try {
-      const [prescriptionsResponse, lotsResponse, patientsResponse, auditsResponse] =
+      const [prescriptionsResponse, lotsResponse, patientsResponse] =
         await Promise.all([
           api.listPrescriptions({ page: 1, limit: 200 }),
           api.listInventoryLots({ page: 1, limit: 50, belowThreshold: false }),
           api.searchPatients({ page: 1, limit: 8, q: "" }),
-          canViewAuditLogs
-            ? api.listAuditLogs({ page: 1, limit: 8 })
-            : Promise.resolve({ data: [] }),
         ]);
 
       setSummary({
         prescriptions: prescriptionsResponse?.data || [],
         lots: lotsResponse?.data || [],
-        lotSummary:
-          lotsResponse?.summary || { belowThresholdTotal: 0, totalLotRows: 0 },
+        lotSummary: lotsResponse?.summary || {
+          belowThresholdTotal: 0,
+          totalLotRows: 0,
+        },
         patients: patientsResponse?.data || [],
-        audits: auditsResponse?.data || [],
       });
     } catch (err) {
       setError(err.message || "Failed to load dashboard.");
     } finally {
       setLoading(false);
     }
-  }, [canViewAuditLogs]);
+  }, []);
 
   React.useEffect(() => {
     loadDashboard();
@@ -80,7 +73,9 @@ const DashboardPage = () => {
     <AppShell title="Dashboard">
       <div className="dashboard-page">
         {error ? <div className="dashboard-message error">{error}</div> : null}
-        {loading ? <div className="dashboard-message">Loading dashboard...</div> : null}
+        {loading ? (
+          <div className="dashboard-message">Loading dashboard...</div>
+        ) : null}
 
         {!loading ? (
           <>
@@ -127,7 +122,9 @@ const DashboardPage = () => {
                     {recentQueue.map((item) => (
                       <div key={item.id} className="dashboard-queue-item">
                         <div>
-                          <strong>{item?.medicationDisplay || "Medication"}</strong>
+                          <strong>
+                            {item?.medicationDisplay || "Medication"}
+                          </strong>
                           <p>
                             {item?.patient?.firstName || "Unknown"}{" "}
                             {item?.patient?.lastName || "Patient"}
@@ -141,7 +138,11 @@ const DashboardPage = () => {
                           >
                             {String(item?.status || "new").replace(/_/g, " ")}
                           </span>
-                          <em>{formatDateTime(item?.created_at || item?.createdat)}</em>
+                          <em>
+                            {formatDateTime(
+                              item?.created_at || item?.createdat,
+                            )}
+                          </em>
                         </div>
                       </div>
                     ))}
@@ -167,116 +168,50 @@ const DashboardPage = () => {
                   <div className="dashboard-alert-list">
                     {lowLots.map((lot) => (
                       <div key={lot.id} className="dashboard-alert-item">
-                        <strong>{lot.drugDisplayName || "Inventory item"}</strong>
-                        <p>
-                          Lot {lot.lotNumber} | {lot.quantityOnHand} on hand / min{" "}
-                          {lot.minimumLevel}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            </div>
-
-            <div className="dashboard-lower-grid">
-              <Card className="dashboard-panel">
-                <div className="dashboard-panel-header">
-                  <div>
-                    <p className="dashboard-eyebrow">Patients</p>
-                    <h3>Recent patient records</h3>
-                  </div>
-                  <span>{summary.patients.length} visible</span>
-                </div>
-
-                {!summary.patients.length ? (
-                  <EmptyState
-                    title="No patient records"
-                    description="Patient records will appear here as soon as the directory has entries."
-                  />
-                ) : (
-                  <div className="dashboard-patient-list">
-                    {summary.patients.map((patient) => (
-                      <div key={patient.id} className="dashboard-patient-item">
                         <strong>
-                          {patient.firstName} {patient.lastName}
+                          {lot.drugDisplayName || "Inventory item"}
                         </strong>
                         <p>
-                          {patient.patientNumber} | {patient.phonePrimary || "No phone"}
+                          Lot {lot.lotNumber} | {lot.quantityOnHand} on hand /
+                          min {lot.minimumLevel}
                         </p>
                       </div>
                     ))}
                   </div>
                 )}
-              </Card>
-
-              <Card className="dashboard-panel">
-                <div className="dashboard-panel-header">
-                  <div>
-                    <p className="dashboard-eyebrow">System coverage</p>
-                    <h3>Operational footprint</h3>
-                  </div>
-                </div>
-                <div className="dashboard-metric-stack">
-                  <div>
-                    <span>Total prescriptions</span>
-                    <strong>{counts.total || 0}</strong>
-                  </div>
-                  <div>
-                    <span>Total lot rows</span>
-                    <strong>{summary.lotSummary?.totalLotRows || 0}</strong>
-                  </div>
-                  <div>
-                    <span>Visible patient records</span>
-                    <strong>{summary.patients.length || 0}</strong>
-                  </div>
-                  <div>
-                    <span>Audit visibility</span>
-                    <strong>{canViewAuditLogs ? "Enabled" : "Restricted"}</strong>
-                  </div>
-                </div>
               </Card>
             </div>
 
-            {canViewAuditLogs ? (
-              <Card className="dashboard-panel dashboard-audit-panel">
-                <div className="dashboard-panel-header">
-                  <div>
-                    <p className="dashboard-eyebrow">Protected activity</p>
-                    <h3>Global audit feed</h3>
-                  </div>
-                  <span>Pharmacist/Admin only</span>
+            <Card className="dashboard-panel">
+              <div className="dashboard-panel-header">
+                <div>
+                  <p className="dashboard-eyebrow">Patients</p>
+                  <h3>Recent patient records</h3>
                 </div>
+                <span>{summary.patients.length} visible</span>
+              </div>
 
-                {!summary.audits.length ? (
-                  <EmptyState
-                    title="No audit events yet"
-                    description="Audit activity will appear here as records are created, updated, reviewed, and deleted."
-                  />
-                ) : (
-                  <div className="dashboard-audit-list">
-                    {summary.audits.map((entry) => (
-                      <div key={entry.id} className="dashboard-audit-item">
-                        <div className="dashboard-audit-meta">
-                          <span className="dashboard-pill audit-type">
-                            {entry.entityType}
-                          </span>
-                          <span className="dashboard-pill audit-action">
-                            {entry.action}
-                          </span>
-                          <em>{formatDateTime(entry.createdat)}</em>
-                        </div>
-                        <strong>{entry.summary}</strong>
-                        <p>
-                          Actor role: {entry.actorRole || "unknown"}
-                          {entry.entityId ? ` | Entity: ${entry.entityId}` : ""}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            ) : null}
+              {!summary.patients.length ? (
+                <EmptyState
+                  title="No patient records"
+                  description="Patient records will appear here as soon as the directory has entries."
+                />
+              ) : (
+                <div className="dashboard-patient-list">
+                  {summary.patients.map((patient) => (
+                    <div key={patient.id} className="dashboard-patient-item">
+                      <strong>
+                        {patient.firstName} {patient.lastName}
+                      </strong>
+                      <p>
+                        {patient.patientNumber} |{" "}
+                        {patient.phonePrimary ? formatPhone(patient.phonePrimary) : "No phone"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
           </>
         ) : null}
       </div>

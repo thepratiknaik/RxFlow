@@ -4,6 +4,7 @@ import Card from "../../components/Card.js";
 import EmptyState from "../../components/EmptyState.js";
 import { useAuth } from "../../context/AuthContext.js";
 import api from "../../services/api.js";
+import { formatPhone, formatZip, formatAddress, formatCityStateZip } from "../../utils/formatters.js";
 import "./PatientsPage.css";
 import "../dashboard/DashboardPage.css";
 
@@ -121,21 +122,6 @@ const STATE_OPTIONS = [
   "WY",
 ];
 
-const formatPhoneNumber = (value) => {
-  const digits = String(value || "")
-    .replace(/\D/g, "")
-    .slice(0, 10);
-
-  if (digits.length <= 3) {
-    return digits;
-  }
-
-  if (digits.length <= 6) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  }
-
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-};
 
 const PatientFormFields = ({ formData, onChange }) => {
   return (
@@ -554,6 +540,7 @@ const PatientsPage = () => {
   const [saveError, setSaveError] = React.useState("");
   const [saveSuccess, setSaveSuccess] = React.useState("");
   const [deleteLoading, setDeleteLoading] = React.useState(false);
+  const [viewModalOpen, setViewModalOpen] = React.useState(false);
 
   const [activeTab, setActiveTab] = React.useState("details");
   const [orders, setOrders] = React.useState([]);
@@ -587,8 +574,8 @@ const PatientsPage = () => {
       dateOfBirth: patient?.dateOfBirth || "",
       gender: normalizeGenderValue(patient?.gender),
       email: patient?.email || "",
-      phonePrimary: formatPhoneNumber(patient?.phonePrimary),
-      phoneSecondary: formatPhoneNumber(patient?.phoneSecondary),
+      phonePrimary: formatPhone(patient?.phonePrimary),
+      phoneSecondary: formatPhone(patient?.phoneSecondary),
       addressLine1: patient?.addressLine1 || "",
       addressLine2: patient?.addressLine2 || "",
       city: patient?.city || "",
@@ -721,11 +708,20 @@ const PatientsPage = () => {
     let cancelled = false;
     setOrdersLoading(true);
     setOrdersError("");
-    api.listPatientPrescriptions(selectedPatientId)
-      .then((res) => { if (!cancelled) setOrders(res?.data || []); })
-      .catch((err) => { if (!cancelled) setOrdersError(err.message || "Failed to load orders."); })
-      .finally(() => { if (!cancelled) setOrdersLoading(false); });
-    return () => { cancelled = true; };
+    api
+      .listPatientPrescriptions(selectedPatientId)
+      .then((res) => {
+        if (!cancelled) setOrders(res?.data || []);
+      })
+      .catch((err) => {
+        if (!cancelled) setOrdersError(err.message || "Failed to load orders.");
+      })
+      .finally(() => {
+        if (!cancelled) setOrdersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [activeTab, selectedPatientId]);
 
   const handleSearchSubmit = (e) => {
@@ -763,15 +759,15 @@ const PatientsPage = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    const nextValue =
-      name === "phonePrimary" || name === "phoneSecondary"
-        ? formatPhoneNumber(value)
-        : value;
-
-    setFormData((current) => ({
-      ...current,
-      [name]: nextValue,
-    }));
+    let nextValue = value;
+    if (name === "phonePrimary" || name === "phoneSecondary") {
+      nextValue = formatPhone(value);
+    } else if (name === "zipCode") {
+      nextValue = formatZip(value);
+    } else if (name === "email") {
+      nextValue = value.toLowerCase();
+    }
+    setFormData((current) => ({ ...current, [name]: nextValue }));
   };
 
   const handleInsuranceFormChange = (e) => {
@@ -981,6 +977,7 @@ const PatientsPage = () => {
       setSelectedPatient(null);
       setSelectedPatientId("");
       setDetailsError("");
+      setViewModalOpen(false);
       applyPatientToForm(EMPTY_FORM);
 
       const nextPage =
@@ -1003,343 +1000,336 @@ const PatientsPage = () => {
   return (
     <AppShell title="Patients">
       <div className="patients-page">
-        <div className="patients-grid">
-          <Card className="patients-panel patients-list-panel">
-            <div className="patients-toolbar">
-              <div>
-                <h3>Patient Directory</h3>
-                <p className="patients-subtitle">
-                  Search patients by name, email, phone, patient number, or MRN.
-                </p>
+        <div className="pg-head">
+          {canManagePatients ? (
+            <button
+              type="button"
+              className="patients-primary-btn"
+              onClick={handleStartNewPatient}
+            >
+              + Add Patient
+            </button>
+          ) : null}
+        </div>
+
+        <Card>
+          <form className="patients-search" onSubmit={(e) => e.preventDefault()} style={{ marginBottom: "1rem" }}>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search patients"
+              style={{ width: "100%" }}
+            />
+          </form>
+          {patientsError ? (
+            <div className="patients-message error">{patientsError}</div>
+          ) : null}
+          {saveSuccess ? (
+            <div className="patients-message success">{saveSuccess}</div>
+          ) : null}
+
+          {patientsLoading ? (
+            <div className="patients-message">Loading patients...</div>
+          ) : patients.length === 0 ? (
+            <EmptyState
+              title="No patients found"
+              description="Create a patient record or adjust the search term."
+            />
+          ) : (
+            <>
+              <div className="patients-list">
+                {patients.map((patient) => (
+                  <button
+                    key={patient.id}
+                    type="button"
+                    className={`patients-list-item${selectedPatientId === patient.id ? " active" : ""}`}
+                    onClick={() => {
+                      setSelectedPatientId(patient.id);
+                      setActiveTab("details");
+                      setSaveError("");
+                      setSaveSuccess("");
+                      setViewModalOpen(true);
+                    }}
+                  >
+                    <div>
+                      <strong>
+                        {patient.firstName} {patient.lastName}
+                      </strong>
+                      <p>
+                        {patient.patientNumber} | {patient.phonePrimary}
+                      </p>
+                    </div>
+                    <span>{patient.email || "No email"}</span>
+                  </button>
+                ))}
               </div>
-              {canManagePatients ? (
+
+              <div className="patients-pagination">
                 <button
                   type="button"
-                  className="patients-primary-btn"
-                  onClick={handleStartNewPatient}
+                  onClick={() =>
+                    setPatientsPagination((c) => ({
+                      ...c,
+                      page: Math.max(c.page - 1, 1),
+                    }))
+                  }
+                  disabled={patientsPagination.page <= 1}
                 >
-                  Add Patient
+                  Previous
                 </button>
-              ) : null}
-            </div>
-
-            <form className="patients-search" onSubmit={handleSearchSubmit}>
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search patients"
-              />
-              <button type="submit">Search</button>
-            </form>
-
-            {patientsError ? (
-              <div className="patients-message error">{patientsError}</div>
-            ) : null}
-
-            {patientsLoading ? (
-              <div className="patients-message">Loading patients...</div>
-            ) : patients.length === 0 ? (
-              <EmptyState
-                title="No patients found"
-                description="Create a patient record or adjust the search term."
-              />
-            ) : (
-              <>
-                <div className="patients-list">
-                  {patients.map((patient) => {
-                    const isActive = selectedPatientId === patient.id;
-
-                    return (
-                      <button
-                        key={patient.id}
-                        type="button"
-                        className={`patients-list-item${isActive ? " active" : ""}`}
-                        onClick={() => setSelectedPatientId(patient.id)}
-                      >
-                        <div>
-                          <strong>
-                            {patient.firstName} {patient.lastName}
-                          </strong>
-                          <p>
-                            {patient.patientNumber} | {patient.phonePrimary}
-                          </p>
-                        </div>
-                        <span>{patient.email || "No email"}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="patients-pagination">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPatientsPagination((current) => ({
-                        ...current,
-                        page: Math.max(current.page - 1, 1),
-                      }))
-                    }
-                    disabled={patientsPagination.page <= 1}
-                  >
-                    Previous
-                  </button>
-                  <span>
-                    Page {patientsPagination.page} of{" "}
-                    {Math.max(patientsPagination.totalPages || 1, 1)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPatientsPagination((current) => ({
-                        ...current,
-                        page: Math.min(
-                          current.page + 1,
-                          Math.max(current.totalPages || 1, 1),
-                        ),
-                      }))
-                    }
-                    disabled={
-                      patientsPagination.page >=
-                      Math.max(patientsPagination.totalPages || 1, 1)
-                    }
-                  >
-                    Next
-                  </button>
-                </div>
-              </>
-            )}
-          </Card>
-
-          <div className="patients-sidepanels">
-            <Card className="patients-panel">
-              <div className="patients-section-header">
-                <h3>Patient Details</h3>
-                <div className="patients-tabs">
-                  <button
-                    className={activeTab === "details" ? "active" : ""}
-                    onClick={() => setActiveTab("details")}
-                  >
-                    Details
-                  </button>
-                  <button
-                    className={activeTab === "insurance" ? "active" : ""}
-                    onClick={() => setActiveTab("insurance")}
-                  >
-                    Insurance
-                  </button>
-                  <button
-                    className={activeTab === "orders" ? "active" : ""}
-                    onClick={() => setActiveTab("orders")}
-                  >
-                    Orders
-                  </button>
-                </div>
-                {selectedPatient ? (
-                  <span className="patients-chip">
-                    {selectedPatient.patientNumber}
-                  </span>
-                ) : null}
+                <span>
+                  Page {patientsPagination.page} of{" "}
+                  {Math.max(patientsPagination.totalPages || 1, 1)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPatientsPagination((c) => ({
+                      ...c,
+                      page: Math.min(
+                        c.page + 1,
+                        Math.max(c.totalPages || 1, 1),
+                      ),
+                    }))
+                  }
+                  disabled={
+                    patientsPagination.page >=
+                    Math.max(patientsPagination.totalPages || 1, 1)
+                  }
+                >
+                  Next
+                </button>
               </div>
-              {activeTab === "orders" ? (
-                selectedPatient ? (
-                  <div className="patients-orders-panel">
-                    {ordersError ? (
-                      <div className="patients-message error">{ordersError}</div>
-                    ) : null}
-                    {ordersLoading ? (
-                      <div className="patients-message">Loading orders...</div>
-                    ) : orders.length === 0 ? (
-                      <EmptyState
-                        title="No prescriptions"
-                        description="This patient has no prescription history yet."
-                      />
-                    ) : (
-                      <div className="patients-orders-list">
-                        {orders.map((rx) => {
-                          const drug = Array.isArray(rx.fhirRaw?.drug_name)
-                            ? rx.fhirRaw.drug_name[0]
-                            : rx.medicationDisplay || "Drug";
-                          const status = String(rx.status || "").replace(/_/g, " ");
-                          return (
-                            <div key={rx.id} className="patients-order-item">
-                              <div className="patients-order-header">
-                                <strong>{drug}</strong>
-                                <span className={`patients-order-pill status-${String(rx.status || "").toLowerCase()}`}>
-                                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                                </span>
-                              </div>
-                              <div className="patients-order-meta">
-                                <span>Rx #{rx.prescriptionNumber || rx.id}</span>
-                                <span>Qty: {rx.quantityValue ?? rx.quantity ?? "-"}</span>
-                                <span>
-                                  {rx.created_at
-                                    ? new Date(rx.created_at).toLocaleDateString()
-                                    : "-"}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="Select a patient"
-                    description="Choose a patient to view their prescriptions."
-                  />
-                )
-              ) : activeTab === "insurance" ? (
-                selectedPatient ? (
-                  <InsuranceSection
-                    selectedPatient={selectedPatient}
-                    canManagePatients={canManagePatients}
-                    insuranceList={insuranceList}
-                    insuranceLoading={insuranceLoading}
-                    insuranceError={insuranceError}
-                    insuranceForm={insuranceForm}
-                    insuranceSaving={insuranceSaving}
-                    insuranceMessage={insuranceMessage}
-                    insuranceEditingId={insuranceEditingId}
-                    insuranceEditForm={insuranceEditForm}
-                    insuranceActionId={insuranceActionId}
-                    onInsuranceFormChange={handleInsuranceFormChange}
-                    onInsuranceSave={handleInsuranceSave}
-                    onInsuranceEditStart={handleInsuranceEditStart}
-                    onInsuranceEditCancel={handleInsuranceEditCancel}
-                    onInsuranceEditFormChange={handleInsuranceEditFormChange}
-                    onInsuranceEditSave={handleInsuranceEditSave}
-                    onInsuranceDelete={handleInsuranceDelete}
-                  />
-                ) : (
-                  <EmptyState
-                    title="Select a patient"
-                    description="Choose a patient to view insurance details."
-                  />
-                )
-              ) : (
-                <>
-                  {detailsError ? (
-                    <div className="patients-message error">{detailsError}</div>
-                  ) : null}
-
-                  {saveError ? (
-                    <div className="patients-message error">{saveError}</div>
-                  ) : null}
-                  {saveSuccess ? (
-                    <div className="patients-message success">
-                      {saveSuccess}
-                    </div>
-                  ) : null}
-
-                  {detailsLoading ? (
-                    <div className="patients-message">
-                      Loading patient details...
-                    </div>
-                  ) : canManagePatients && selectedPatient ? (
-                    <form
-                      className="patients-form"
-                      onSubmit={handlePatientSave}
-                    >
-                      <PatientFormFields
-                        formData={formData}
-                        onChange={handleFormChange}
-                      />
-
-                      <div className="patients-actions">
-                        <button
-                          type="button"
-                          className="patients-danger-btn"
-                          onClick={handleDeletePatient}
-                          disabled={deleteLoading || saveLoading}
-                        >
-                          {deleteLoading ? "Deleting..." : "Delete Patient"}
-                        </button>
-                        <button
-                          type="submit"
-                          className="patients-primary-btn"
-                          disabled={saveLoading || deleteLoading}
-                        >
-                          {saveLoading ? "Saving..." : "Update Patient"}
-                        </button>
-                      </div>
-                    </form>
-                  ) : canManagePatients ? (
-                    <EmptyState
-                      title="No patient selected"
-                      description="Select a patient from the directory to edit details, or use Add Patient to create a new record."
-                    />
-                  ) : selectedPatient ? (
-                    <div className="patients-readonly">
-                      <div className="patients-detail-grid">
-                        <div>
-                          <span>Name</span>
-                          <strong>
-                            {selectedPatient.firstName}{" "}
-                            {selectedPatient.lastName}
-                          </strong>
-                        </div>
-                        <div>
-                          <span>Patient Number</span>
-                          <strong>{selectedPatient.patientNumber}</strong>
-                        </div>
-                        <div>
-                          <span>Phone</span>
-                          <strong>{selectedPatient.phonePrimary}</strong>
-                        </div>
-                        <div>
-                          <span>Email</span>
-                          <strong>{selectedPatient.email || "N/A"}</strong>
-                        </div>
-                        <div>
-                          <span>DOB</span>
-                          <strong>
-                            {selectedPatient.dateOfBirth || "N/A"}
-                          </strong>
-                        </div>
-                        <div>
-                          <span>Address</span>
-                          <strong>
-                            {selectedPatient.addressLine1},{" "}
-                            {selectedPatient.city}, {selectedPatient.state}{" "}
-                            {selectedPatient.zipCode}
-                          </strong>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <EmptyState
-                      title="Select a patient"
-                      description="Choose a patient from the directory to review their details."
-                    />
-                  )}
-                </>
-              )}
-            </Card>
-          </div>
-        </div>
+            </>
+          )}
+        </Card>
       </div>
 
-      {createModalOpen ? (
-        <div
-          className="patients-modal-backdrop"
-          onClick={handleCloseCreateModal}
-        >
-          <div className="patients-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="patients-modal-header">
+      {/* ── View Patient modal ── */}
+      {viewModalOpen ? (
+        <div className="modal-backdrop" onClick={() => setViewModalOpen(false)}>
+          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
               <div>
-                <h3>Add Patient</h3>
-                <p className="patients-subtitle">
-                  Create a new patient record and save it to the directory.
-                </p>
+                <h3>
+                  {selectedPatient
+                    ? `${selectedPatient.firstName} ${selectedPatient.lastName}`
+                    : "Patient Details"}
+                </h3>
+                {selectedPatient ? (
+                  <p>{selectedPatient.patientNumber}</p>
+                ) : null}
               </div>
               <button
                 type="button"
-                className="patients-modal-close"
+                className="modal-close"
+                onClick={() => setViewModalOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-tabs">
+              <button type="button" className={`modal-tab${activeTab === "details" ? " active" : ""}`} onClick={() => setActiveTab("details")}>Details</button>
+              <button type="button" className={`modal-tab${activeTab === "insurance" ? " active" : ""}`} onClick={() => setActiveTab("insurance")}>Insurance</button>
+              <button type="button" className={`modal-tab${activeTab === "orders" ? " active" : ""}`} onClick={() => setActiveTab("orders")}>Orders</button>
+            </div>
+
+            {detailsLoading ? (
+              <div className="patients-message">Loading patient details...</div>
+            ) : !selectedPatient ? (
+              <EmptyState
+                title="No patient data"
+                description="Could not load patient details."
+              />
+            ) : activeTab === "details" ? (
+              <>
+                {detailsError ? (
+                  <div className="patients-message error">{detailsError}</div>
+                ) : null}
+                {saveError ? (
+                  <div className="patients-message error">{saveError}</div>
+                ) : null}
+
+                {canManagePatients ? (
+                  <form className="patients-form" onSubmit={handlePatientSave}>
+                    <PatientFormFields
+                      formData={formData}
+                      onChange={handleFormChange}
+                    />
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="patients-danger-btn"
+                        onClick={handleDeletePatient}
+                        disabled={deleteLoading || saveLoading}
+                      >
+                        {deleteLoading ? "Deleting..." : "Delete Patient"}
+                      </button>
+                      <button
+                        type="submit"
+                        className="patients-primary-btn"
+                        disabled={saveLoading || deleteLoading}
+                      >
+                        {saveLoading ? "Saving..." : "Update Patient"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="patients-readonly">
+                    <div className="detail-grid">
+                      <div>
+                        <span>Full Name</span>
+                        <strong>
+                          {[selectedPatient.firstName, selectedPatient.middleName, selectedPatient.lastName].filter(Boolean).join(" ")}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Patient Number</span>
+                        <strong>{selectedPatient.patientNumber || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Date of Birth</span>
+                        <strong>{selectedPatient.dateOfBirth || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Gender</span>
+                        <strong>{selectedPatient.gender || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Primary Phone</span>
+                        <strong>{formatPhone(selectedPatient.phonePrimary) || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Secondary Phone</span>
+                        <strong>{formatPhone(selectedPatient.phoneSecondary) || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Email</span>
+                        <strong>{selectedPatient.email || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>MRN</span>
+                        <strong>{selectedPatient.mrn || "—"}</strong>
+                      </div>
+                      {selectedPatient.addressLine1 && (
+                        <div className="detail-grid-span2">
+                          <span>Address</span>
+                          <strong>
+                            {formatAddress(
+                              selectedPatient.addressLine1,
+                              selectedPatient.addressLine2,
+                              selectedPatient.city,
+                              selectedPatient.state,
+                              selectedPatient.zipCode,
+                            )}
+                          </strong>
+                        </div>
+                      )}
+                      {!selectedPatient.addressLine1 && (
+                        <>
+                          <div>
+                            <span>City / State</span>
+                            <strong>{formatCityStateZip(selectedPatient.city, selectedPatient.state, "")}</strong>
+                          </div>
+                          <div>
+                            <span>Zip Code</span>
+                            <strong>{formatZip(selectedPatient.zipCode) || "—"}</strong>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : activeTab === "insurance" ? (
+              <InsuranceSection
+                selectedPatient={selectedPatient}
+                canManagePatients={canManagePatients}
+                insuranceList={insuranceList}
+                insuranceLoading={insuranceLoading}
+                insuranceError={insuranceError}
+                insuranceForm={insuranceForm}
+                insuranceSaving={insuranceSaving}
+                insuranceMessage={insuranceMessage}
+                insuranceEditingId={insuranceEditingId}
+                insuranceEditForm={insuranceEditForm}
+                insuranceActionId={insuranceActionId}
+                onInsuranceFormChange={handleInsuranceFormChange}
+                onInsuranceSave={handleInsuranceSave}
+                onInsuranceEditStart={handleInsuranceEditStart}
+                onInsuranceEditCancel={handleInsuranceEditCancel}
+                onInsuranceEditFormChange={handleInsuranceEditFormChange}
+                onInsuranceEditSave={handleInsuranceEditSave}
+                onInsuranceDelete={handleInsuranceDelete}
+              />
+            ) : (
+              <div className="patients-orders-panel">
+                {ordersError ? (
+                  <div className="patients-message error">{ordersError}</div>
+                ) : null}
+                {ordersLoading ? (
+                  <div className="patients-message">Loading orders...</div>
+                ) : orders.length === 0 ? (
+                  <EmptyState
+                    title="No prescriptions"
+                    description="This patient has no prescription history yet."
+                  />
+                ) : (
+                  <div className="patients-orders-list">
+                    {orders.map((rx) => {
+                      const drug = Array.isArray(rx.fhirRaw?.drug_name)
+                        ? rx.fhirRaw.drug_name[0]
+                        : rx.medicationDisplay || "Drug";
+                      const status = String(rx.status || "").replace(/_/g, " ");
+                      return (
+                        <div key={rx.id} className="patients-order-item">
+                          <div className="patients-order-header">
+                            <strong>{drug}</strong>
+                            <span
+                              className={`patients-order-pill status-${String(rx.status || "").toLowerCase()}`}
+                            >
+                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                            </span>
+                          </div>
+                          <div className="patients-order-meta">
+                            <span>Rx #{rx.prescriptionNumber || rx.id}</span>
+                            <span>
+                              Qty: {rx.quantityValue ?? rx.quantity ?? "-"}
+                            </span>
+                            <span>
+                              {rx.created_at
+                                ? new Date(rx.created_at).toLocaleDateString()
+                                : "-"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Add Patient modal ── */}
+      {createModalOpen ? (
+        <div className="modal-backdrop" onClick={handleCloseCreateModal}>
+          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3>Add Patient</h3>
+                <p>Create a new patient record and save it to the directory.</p>
+              </div>
+              <button
+                type="button"
+                className="modal-close"
                 onClick={handleCloseCreateModal}
               >
-                Close
+                ×
               </button>
             </div>
 
@@ -1352,7 +1342,6 @@ const PatientsPage = () => {
                 formData={formData}
                 onChange={handleFormChange}
               />
-
               <div className="patients-actions">
                 <button
                   type="button"

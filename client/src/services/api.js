@@ -249,22 +249,6 @@ class ApiService {
     });
   }
 
-  async setupPharmacy({ name, licenseNumber }) {
-    const data = await this.request(API_ENDPOINTS.AUTH.SETUP_PHARMACY, {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        licenseNumber,
-      }),
-    });
-
-    if (data?.user) {
-      this.storeAuth(data);
-    }
-
-    return data;
-  }
-
   async updateUserRole(id, role) {
     return await this.request(API_ENDPOINTS.AUTH.USER_ROLE(id), {
       method: "PATCH",
@@ -300,10 +284,14 @@ class ApiService {
   }
 
   async setupPharmacy(data) {
-    return await this.request(API_ENDPOINTS.PHARMACY.SETUP, {
+    const result = await this.request(API_ENDPOINTS.PHARMACY.SETUP, {
       method: "POST",
       body: JSON.stringify(data),
     });
+    if (result?.user) {
+      this.storeAuth(result);
+    }
+    return result;
   }
 
   async listDrugs({ page = 1, limit = 20, search = "" } = {}) {
@@ -517,10 +505,26 @@ class ApiService {
     });
   }
 
+  async getDrugAvailability(id) {
+    return await this.request(API_ENDPOINTS.PRESCRIPTIONS.DRUG_AVAILABILITY(id), {
+      method: "GET",
+    });
+  }
+
   async getPrescriptionLots(id) {
     return await this.request(API_ENDPOINTS.PRESCRIPTIONS.LOTS(id), {
       method: "GET",
     });
+  }
+
+  async assignItemLot(prescriptionId, itemId, { lotId, quantity } = {}) {
+    return await this.request(
+      API_ENDPOINTS.PRESCRIPTIONS.ASSIGN_ITEM_LOT(prescriptionId, itemId),
+      {
+        method: "PATCH",
+        body: JSON.stringify({ lotId: lotId || null, quantity: quantity || null }),
+      },
+    );
   }
 
   async markPrescriptionReady(id, lotId) {
@@ -686,6 +690,32 @@ class ApiService {
         method: "GET",
       },
     );
+  }
+
+  async getBillingPlans() {
+    return await this.request(API_ENDPOINTS.BILLING.PLANS, { method: "GET" });
+  }
+
+  async getBillingSubscription() {
+    return await this.request(API_ENDPOINTS.BILLING.SUBSCRIPTION, { method: "GET" });
+  }
+
+  async createCheckoutSession(planId, successUrl, cancelUrl) {
+    return await this.request(API_ENDPOINTS.BILLING.CHECKOUT, {
+      method: "POST",
+      body: JSON.stringify({ planId, successUrl, cancelUrl }),
+    });
+  }
+
+  async createPortalSession() {
+    return await this.request(API_ENDPOINTS.BILLING.PORTAL, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  }
+
+  async listBillingInvoices() {
+    return await this.request(API_ENDPOINTS.BILLING.INVOICES, { method: "GET" });
   }
 
   getToken() {

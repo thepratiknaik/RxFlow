@@ -118,6 +118,13 @@ export const setupPharmacyOnboarding = async (req, res) => {
       success: true,
       message: "Pharmacy created and linked to your account.",
       data: pharmacy,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullname: user.fullname,
+        pharmacyId: user.pharmacyId,
+        role: user.role,
+      },
     });
   } catch (error) {
     return res.status(500).json({

@@ -67,15 +67,47 @@ INSERT INTO invoice_status (status, description) VALUES
 CREATE TABLE pharmacy (
     pharmacy_id         SERIAL          PRIMARY KEY,
     name                VARCHAR(255)    NOT NULL,
-    license_number      VARCHAR(100)    NOT NULL UNIQUE,
-    subscription_tier   VARCHAR(50)     NOT NULL,
-    status_id           INT             NOT NULL,
-    created_at          TIMESTAMP       NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMP       NOT NULL DEFAULT NOW(),
+    license_number         VARCHAR(100)    NOT NULL UNIQUE,
+    subscription_tier      VARCHAR(50)     NOT NULL DEFAULT 'free',
+    subscription_status    VARCHAR(50)     NOT NULL DEFAULT 'inactive',
+    stripe_customer_id     VARCHAR(255),
+    stripe_subscription_id VARCHAR(255),
+    status_id              INT             NOT NULL,
+    created_at             TIMESTAMP       NOT NULL DEFAULT NOW(),
+    updated_at             TIMESTAMP       NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_pharmacy_status
         FOREIGN KEY (status_id) REFERENCES pharmacy_status(id)
 );
+
+-- Run these ALTER TABLE statements if the pharmacy table already exists:
+-- ALTER TABLE pharmacy ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) NOT NULL DEFAULT 'inactive';
+-- ALTER TABLE pharmacy ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
+-- ALTER TABLE pharmacy ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);
+
+CREATE TABLE stripe_invoice (
+    id                  SERIAL          PRIMARY KEY,
+    pharmacy_id         INT             NOT NULL,
+    stripe_invoice_id   VARCHAR(255)    NOT NULL UNIQUE,
+    invoice_number      VARCHAR(100),
+    status              VARCHAR(50)     NOT NULL DEFAULT 'draft',
+    amount_due          INT,
+    amount_paid         INT,
+    currency            VARCHAR(10),
+    period_start        TIMESTAMP,
+    period_end          TIMESTAMP,
+    hosted_invoice_url  TEXT,
+    invoice_pdf         TEXT,
+    stripe_created_at   TIMESTAMP,
+    created_at          TIMESTAMP       NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMP       NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_stripe_invoice_pharmacy
+        FOREIGN KEY (pharmacy_id) REFERENCES pharmacy(pharmacy_id)
+);
+
+-- Run this if the table doesn't exist yet on an existing DB:
+-- CREATE TABLE IF NOT EXISTS stripe_invoice ( ... see above ... );
 
 CREATE TABLE "user" (
     user_id         SERIAL          PRIMARY KEY,
@@ -212,6 +244,23 @@ CREATE TABLE prescription (
         FOREIGN KEY (entered_by)    REFERENCES "user"(user_id),
     CONSTRAINT fk_rx_verified_by
         FOREIGN KEY (verified_by)   REFERENCES "user"(user_id)
+);
+
+CREATE TABLE prescription_item (
+    item_id             SERIAL          PRIMARY KEY,
+    prescription_id     INT             NOT NULL,
+    drug_id             INT             NOT NULL,
+    quantity            INT             NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    lot_id              INT,
+    quantity_blocked    INT             NOT NULL DEFAULT 0 CHECK (quantity_blocked >= 0),
+    created_at          TIMESTAMP       NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_item_prescription
+        FOREIGN KEY (prescription_id) REFERENCES prescription(prescription_id) ON DELETE CASCADE,
+    CONSTRAINT fk_item_drug
+        FOREIGN KEY (drug_id) REFERENCES drug(drug_id),
+    CONSTRAINT fk_item_lot
+        FOREIGN KEY (lot_id) REFERENCES inventory_lot(lot_id)
 );
 
 CREATE TABLE invoice (

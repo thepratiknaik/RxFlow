@@ -248,6 +248,7 @@ export const listUsers = async (req, res) => {
       where,
       attributes: [
         "id",
+        "fullname",
         "email",
         "isactive",
         "pharmacyId",

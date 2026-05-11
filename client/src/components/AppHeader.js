@@ -11,7 +11,7 @@ const AppHeader = ({ title, actions }) => {
       </div>
       <div className="app-header-center" aria-label="Application logo">
         <img src={logo} alt="RxFlow" className="app-header-logo-image" />
-        <span className="app-header-logo-text">RxFlow</span>
+        {/* <span className="app-header-logo-text">RxFlow</span> */}
       </div>
       <div className="app-header-right">{actions ?? <ProfileDropdown />}</div>
     </div>

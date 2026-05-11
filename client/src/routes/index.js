@@ -16,6 +16,7 @@ import AdminRoute from "../components/AdminRoute.js";
 import { AuthProvider } from "../context/AuthContext.js";
 import { ROUTES } from "../config/routes.js";
 import UsersPage from "../modules/admin/UsersPage.js";
+import BillingPage from "../modules/billing/BillingPage.js";
 
 const AppRoutes = () => {
   return (
@@ -94,6 +95,16 @@ const AppRoutes = () => {
               <ProtectedRoute>
                 <AdminRoute>
                   <UsersPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.BILLING}
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <BillingPage />
                 </AdminRoute>
               </ProtectedRoute>
             }

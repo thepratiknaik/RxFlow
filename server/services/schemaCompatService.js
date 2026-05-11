@@ -1,5 +1,6 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
+import { pullAndUpsertDrugs } from "./drugPullService.js";
 
 const ROLE_LABELS = {
   admin: "Admin",
@@ -187,6 +188,23 @@ export const ensureDrugByDescriptor = async ({
 
   if (existing?.drug_id) {
     return existing.drug_id;
+  }
+
+  // Not found locally — try pulling from FDA before inserting a placeholder
+  const fdaSearchTerm = normalizedBrand || normalizedGeneric;
+  if (fdaSearchTerm) {
+    try {
+      await pullAndUpsertDrugs({ searchTerm: fdaSearchTerm, limit: 5 });
+      const afterFda = await sequelize.query(
+        `SELECT drug_id FROM drug WHERE lower(brand_name) = lower(:brandName) OR lower(generic_name) = lower(:genericName) LIMIT 1`,
+        { replacements: { brandName: normalizedBrand, genericName: normalizedGeneric }, type: QueryTypes.SELECT, plain: true },
+      );
+      if (afterFda?.drug_id) {
+        return afterFda.drug_id;
+      }
+    } catch {
+      // FDA unavailable — fall through to placeholder insert
+    }
   }
 
   const inserted = await sequelize.query(
